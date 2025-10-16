@@ -1,9 +1,9 @@
-#title
+# title
 
 Using the [Global Earthquake-Tsunami Risk Assessment Dataset](https://www.kaggle.com/datasets/ahmeduzaki/global-earthquake-tsunami-risk-assessment-dataset?resource=download) 
 ...
 
-##Dataset Information
+### Dataset Information
 
 Total Records: 782 earthquakes
 Time Period: January 1, 2001 to December 31, 2022 (22 years)
