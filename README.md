@@ -1,7 +1,7 @@
 #  Global Earthquake–Tsunami Risk Visualizer
 
 ## Overview
-Interactive D3 map to explore tsunami-relevant earthquake characteristics (2001–2022) for A4 of CSC316. Each event is plotted at its epicenter; circle size/color reflect selected metrics, and filters update in real time. Data was sourced from the [Global Earthquake-Tsunami Risk Assessment Kaggle Dataset](https://www.kaggle.com/datasets/ahmeduzaki/global-earthquake-tsunami-risk-assessment-dataset?resource=download) and mapped with [GeoJSON world map data].(https://geojson-maps.kyd.au/).
+Interactive D3 map to explore tsunami-relevant earthquake characteristics (2001–2022) for A4 of CSC316. Each event is plotted at its epicenter; circle size/color reflect selected metrics, and filters update in real time. Data was sourced from the [Global Earthquake-Tsunami Risk Assessment Kaggle Dataset](https://www.kaggle.com/datasets/ahmeduzaki/global-earthquake-tsunami-risk-assessment-dataset?resource=download) and mapped with [GeoJSON world map data](https://geojson-maps.kyd.au/).
 
 
 ## Dataset Information
