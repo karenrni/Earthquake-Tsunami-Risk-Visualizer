@@ -1,53 +1,53 @@
 /* global d3, topojson */
 
-// file paths
-var FILES = {
+// file paths (don’t change)
+const FILES = {
   world: 'data/world_lowres.json',
   na: 'data/NA_lowres.json',
   quakes: 'data/earthquake_data_tsunami.csv'
 };
 
-// sizes and colors
-var SIZE = { minPx: 2.2, maxPx: 20 };
-var COLORS = {
+// sizes and colors (don’t change)
+const SIZE = { minPx: 2.2, maxPx: 20 };
+const COLORS = {
   mag: '#1b9e77',  // green
   cdi: '#d95f02',  // orange
   mmi: '#7570b3',  // purple
   sig: '#e7298a'   // magenta
 };
 
-// projections
-var WORLD_INIT = { type: 'world', projection: d3.geoNaturalEarth1() };
-var NA_INIT = { type: 'na', projection: d3.geoAlbers().parallels([29.5, 45.5]).rotate([98, 0]).center([0, 38]) };
+// projections (objects themselves are mutable but the refs don’t change)
+const WORLD_INIT = { type: 'world', projection: d3.geoNaturalEarth1() };
+const NA_INIT = { type: 'na', projection: d3.geoAlbers().parallels([29.5, 45.5]).rotate([98, 0]).center([0, 38]) };
 
-// app state
-var currentBasemap = WORLD_INIT;
-var quakes = [];
-var filtered = [];
-var timeIndex = 0;
-var timeBuckets = [];
-var playing = false;
-var windowMode = 'month';
+// app state (these change over time)
+let currentBasemap = WORLD_INIT;
+let quakes = [];
+let filtered = [];
+let timeIndex = 0;
+let timeBuckets = [];
+let playing = false;
+let windowMode = 'month';
 
-var sizeScale_mag, sizeScale_cdi, sizeScale_mmi, sizeScale_sig;
-var depthShade;
+let sizeScale_mag, sizeScale_cdi, sizeScale_mmi, sizeScale_sig;
+let depthShade;
 
-var svg = d3.select('#map');
-var gLand = svg.append('g').attr('class', 'land');
-var gQuake = svg.append('g').attr('class', 'quakes');
-var tip = d3.select('#tooltip');
+const svg = d3.select('#map');
+const gLand = svg.append('g').attr('class', 'land');
+const gQuake = svg.append('g').attr('class', 'quakes');
+const tip = d3.select('#tooltip');
 
 // layout helpers
 function viewportSize() {
-  var panel = document.querySelector('aside#controls');
-  var panelW = panel ? panel.getBoundingClientRect().width : 320;
-  var w = Math.max(480, window.innerWidth - panelW - 16);
-  var h = Math.max(360, window.innerHeight - 0);
+  const panel = document.querySelector('aside#controls');
+  const panelW = panel ? panel.getBoundingClientRect().width : 320;
+  const w = Math.max(480, window.innerWidth - panelW - 16);
+  const h = Math.max(360, window.innerHeight - 0);
   return { w: w, h: h };
 }
 
 function resize() {
-  var v = viewportSize();
+  const v = viewportSize();
   svg.attr('width', v.w).attr('height', v.h);
 }
 
@@ -57,37 +57,37 @@ window.addEventListener('resize', function () {
 });
 
 // ui refs
-var depthMin = document.getElementById('depthMin');
-var depthMax = document.getElementById('depthMax');
-var depthMinVal = document.getElementById('depthMinVal');
-var depthMaxVal = document.getElementById('depthMaxVal');
+const depthMin = document.getElementById('depthMin');
+const depthMax = document.getElementById('depthMax');
+const depthMinVal = document.getElementById('depthMinVal');
+const depthMaxVal = document.getElementById('depthMaxVal');
 
-var magMin = document.getElementById('magMin');
-var magMax = document.getElementById('magMax');
-var magMinVal = document.getElementById('magMinVal');
-var magMaxVal = document.getElementById('magMaxVal');
+const magMin = document.getElementById('magMin');
+const magMax = document.getElementById('magMax');
+const magMinVal = document.getElementById('magMinVal');
+const magMaxVal = document.getElementById('magMaxVal');
 
-var onlyTsunami = document.getElementById('onlyTsunami');
-var btnClearFilters = document.getElementById('btnClearFilters');
+const onlyTsunami = document.getElementById('onlyTsunami');
+const btnClearFilters = document.getElementById('btnClearFilters');
 
-var btnWorld = document.getElementById('btnWorld');
-var btnNA = document.getElementById('btnNA');
+const btnWorld = document.getElementById('btnWorld');
+const btnNA = document.getElementById('btnNA');
 
-var timeSlider = document.getElementById('timeSlider');
-var btnPrev = document.getElementById('btnPrev');
-var btnNext = document.getElementById('btnNext');
-var btnPlay = document.getElementById('btnPlay');
-var btnShowAll = document.getElementById('btnShowAll');
-var timeLabel = document.getElementById('timeLabel');
+const timeSlider = document.getElementById('timeSlider');
+const btnPrev = document.getElementById('btnPrev');
+const btnNext = document.getElementById('btnNext');
+const btnPlay = document.getElementById('btnPlay');
+const btnShowAll = document.getElementById('btnShowAll');
+const timeLabel = document.getElementById('timeLabel');
 
-var sizeModeInputs = document.querySelectorAll('input[name="sizeMode"]');
-var chkMag = document.getElementById('chk-mag');
-var chkCDI = document.getElementById('chk-cdi');
-var chkMMI = document.getElementById('chk-mmi');
+const sizeModeInputs = document.querySelectorAll('input[name="sizeMode"]');
+const chkMag = document.getElementById('chk-mag');
+const chkCDI = document.getElementById('chk-cdi');
+const chkMMI = document.getElementById('chk-mmi');
 
 // window radios (month/year)
-var windowRadios = document.querySelectorAll('input[name="window"]');
-for (var wr = 0; wr < windowRadios.length; wr++) {
+const windowRadios = document.querySelectorAll('input[name="window"]');
+for (let wr = 0; wr < windowRadios.length; wr++) {
   windowRadios[wr].addEventListener('change', function (e) {
     windowMode = e.target.value;
     bucketByTime();
@@ -97,23 +97,23 @@ for (var wr = 0; wr < windowRadios.length; wr++) {
 }
 
 // size mode radio handlers
-for (var sm = 0; sm < sizeModeInputs.length; sm++) {
+for (let sm = 0; sm < sizeModeInputs.length; sm++) {
   sizeModeInputs[sm].addEventListener('change', function () {
     applyFiltersAndRender();
   });
 }
 
 // checkbox handlers
-var showChecks = [chkMag, chkCDI, chkMMI];
-for (var sc = 0; sc < showChecks.length; sc++) {
+const showChecks = [chkMag, chkCDI, chkMMI];
+for (let sc = 0; sc < showChecks.length; sc++) {
   showChecks[sc].addEventListener('change', function () {
     applyFiltersAndRender();
   });
 }
 
 // filter inputs
-var filterEls = [depthMin, depthMax, magMin, magMax, onlyTsunami];
-for (var fe = 0; fe < filterEls.length; fe++) {
+const filterEls = [depthMin, depthMax, magMin, magMax, onlyTsunami];
+for (let fe = 0; fe < filterEls.length; fe++) {
   filterEls[fe].addEventListener('input', function () {
     depthMinVal.textContent = depthMin.value;
     depthMaxVal.textContent = depthMax.value;
@@ -173,9 +173,9 @@ Promise.all([
   d3.json(FILES.na),
   d3.csv(FILES.quakes, autoTypeQuake)
 ]).then(function (all) {
-  var world = all[0];
-  var na = all[1];
-  var rows = all[2];
+  const world = all[0];
+  const na = all[1];
+  const rows = all[2];
 
   // keep only rows with valid lat/lon
   quakes = rows.filter(function (d) {
@@ -197,7 +197,7 @@ Promise.all([
   renderLegend();
 }).catch(function (err) {
   console.error('data load error:', err);
-  var msg = document.createElement('div');
+  const msg = document.createElement('div');
   msg.style.position = 'absolute';
   msg.style.left = '12px';
   msg.style.top = '12px';
@@ -213,13 +213,13 @@ Promise.all([
 // parse one csv row 
 function autoTypeQuake(d) {
   // year / month
-  var yy = parseInt(d.Year, 10);
-  var mm = parseInt(d.Month, 10);
+  let yy = parseInt(d.Year, 10);
+  let mm = parseInt(d.Month, 10);
   if (!isFinite(yy)) yy = null;
   if (!isFinite(mm)) mm = null;
 
   // magnitude column can be "magnitude" (dataset) or "mag" (older code)
-  var magVal = null;
+  let magVal = null;
   if (isFinite(+d.magnitude)) magVal = +d.magnitude;
   else if (isFinite(+d.mag)) magVal = +d.mag;
 
@@ -245,7 +245,7 @@ function autoTypeQuake(d) {
 // convert topojson to geojson
 function toGeo(obj) {
   if (obj.type === 'FeatureCollection') return obj;
-  var k = Object.keys(obj.objects)[0];
+  const k = Object.keys(obj.objects)[0];
   return topojson.feature(obj, obj.objects[k]);
 }
 
@@ -253,15 +253,15 @@ function toGeo(obj) {
 function loadBasemap(target) {
   currentBasemap = target;
 
-  var v = viewportSize();
+  const v = viewportSize();
   svg.attr('width', v.w).attr('height', v.h);
 
   if (currentBasemap && currentBasemap.feature) {
     currentBasemap.projection.fitSize([v.w, v.h], currentBasemap.feature);
   }
 
-  var feats = (currentBasemap && currentBasemap.feature && currentBasemap.feature.features) ? currentBasemap.feature.features : [];
-  var pathGen = d3.geoPath(currentBasemap.projection);
+  const feats = (currentBasemap && currentBasemap.feature && currentBasemap.feature.features) ? currentBasemap.feature.features : [];
+  const pathGen = d3.geoPath(currentBasemap.projection);
 
   gLand.selectAll('path.country')
     .data(feats, function (d) {
@@ -286,9 +286,9 @@ function loadBasemap(target) {
 // group quakes into monthly or yearly buckets
 function bucketByTime() {
   // keep only rows that have a valid year (and month if needed)
-  var usable = [];
-  for (var i = 0; i < quakes.length; i++) {
-    var q = quakes[i];
+  const usable = [];
+  for (let i = 0; i < quakes.length; i++) {
+    const q = quakes[i];
     if (windowMode === 'month') {
       if (q.year != null && q.month != null && q.month >= 1 && q.month <= 12) usable.push(q);
     } else {
@@ -297,21 +297,21 @@ function bucketByTime() {
   }
 
   // dictionary of key -> rows
-  var groups = {};
-  var key;
+  const groups = {};
+  let key;
   if (windowMode === 'month') {
     // key like "2016-03"
-    for (var j = 0; j < usable.length; j++) {
-      var r = usable[j];
-      var mm = (r.month < 10 ? '0' + r.month : '' + r.month);
+    for (let j = 0; j < usable.length; j++) {
+      const r = usable[j];
+      const mm = (r.month < 10 ? '0' + r.month : '' + r.month);
       key = r.year + '-' + mm;
       if (!groups[key]) groups[key] = [];
       groups[key].push(r);
     }
   } else {
     // key like "2016"
-    for (var k = 0; k < usable.length; k++) {
-      var r2 = usable[k];
+    for (let k = 0; k < usable.length; k++) {
+      const r2 = usable[k];
       key = '' + r2.year;
       if (!groups[key]) groups[key] = [];
       groups[key].push(r2);
@@ -319,13 +319,13 @@ function bucketByTime() {
   }
 
   // turn into sorted array with labels
-  var keys = Object.keys(groups);
+  const keys = Object.keys(groups);
   // sort by time
   keys.sort(function (a, b) {
     if (windowMode === 'month') {
       // a = "YYYY-MM"
-      var ay = parseInt(a.slice(0, 4), 10), am = parseInt(a.slice(5, 7), 10);
-      var by = parseInt(b.slice(0, 4), 10), bm = parseInt(b.slice(5, 7), 10);
+      const ay = parseInt(a.slice(0, 4), 10), am = parseInt(a.slice(5, 7), 10);
+      const by = parseInt(b.slice(0, 4), 10), bm = parseInt(b.slice(5, 7), 10);
       if (ay !== by) return ay - by;
       return am - bm;
     } else {
@@ -333,15 +333,15 @@ function bucketByTime() {
     }
   });
 
-  var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-  var buckets = [];
-  for (var t = 0; t < keys.length; t++) {
-    var kstr = keys[t];
-    var label;
+  const buckets = [];
+  for (let t = 0; t < keys.length; t++) {
+    const kstr = keys[t];
+    let label;
     if (windowMode === 'month') {
-      var y = parseInt(kstr.slice(0, 4), 10);
-      var m = parseInt(kstr.slice(5, 7), 10);
+      const y = parseInt(kstr.slice(0, 4), 10);
+      const m = parseInt(kstr.slice(5, 7), 10);
       label = monthNames[m - 1] + ' ' + y; // e.g., "March 2016"
     } else {
       label = kstr; // e.g., "2016"
@@ -352,7 +352,7 @@ function bucketByTime() {
   timeBuckets = buckets;
 
   // set up slider state
-  var hasBuckets = timeBuckets.length > 1;
+  const hasBuckets = timeBuckets.length > 1;
   timeSlider.disabled = !hasBuckets;
   btnPrev.disabled = !hasBuckets;
   btnNext.disabled = !hasBuckets;
@@ -364,12 +364,12 @@ function bucketByTime() {
 
   // make slider move the view
   timeSlider.oninput = function () {
-    var v = +timeSlider.value;
+    const v = +timeSlider.value;
     setTimeSlider(v);
     applyFiltersAndRender();
   };
   timeSlider.onchange = function () {
-    var v = +timeSlider.value;
+    const v = +timeSlider.value;
     setTimeSlider(v);
     applyFiltersAndRender();
   };
@@ -387,7 +387,7 @@ function setTimeSlider(idx) {
     timeLabel.textContent = 'All times';
     if (!timeSlider.disabled) timeSlider.value = 0;
   } else {
-    var bucket = timeBuckets[idx];
+    const bucket = timeBuckets[idx];
     timeLabel.textContent = bucket ? bucket.label : '';
     if (!timeSlider.disabled) timeSlider.value = idx;
   }
@@ -395,22 +395,22 @@ function setTimeSlider(idx) {
 
 // setup scales (sizes + depth shading)
 function initScales() {
-  var magExtent = d3.extent(quakes, function (d) { return d.mag; });
-  var cdiExtent = d3.extent(quakes, function (d) { return d.cdi; });
-  var mmiExtent = d3.extent(quakes, function (d) { return d.mmi; });
-  var sigExtent = d3.extent(quakes, function (d) { return d.sig; });
+  const magExtent = d3.extent(quakes, function (d) { return d.mag; });
+  const cdiExtent = d3.extent(quakes, function (d) { return d.cdi; });
+  const mmiExtent = d3.extent(quakes, function (d) { return d.mmi; });
+  const sigExtent = d3.extent(quakes, function (d) { return d.sig; });
 
-  var magLo = Math.max(0, (magExtent && magExtent[0] != null) ? magExtent[0] : 0);
-  var magHi = Math.max(1, (magExtent && magExtent[1] != null) ? magExtent[1] : 1);
+  const magLo = Math.max(0, (magExtent && magExtent[0] != null) ? magExtent[0] : 0);
+  const magHi = Math.max(1, (magExtent && magExtent[1] != null) ? magExtent[1] : 1);
 
-  var cdiLo = Math.max(0, (cdiExtent && cdiExtent[0] != null) ? cdiExtent[0] : 0);
-  var cdiHi = Math.max(1, (cdiExtent && cdiExtent[1] != null) ? cdiExtent[1] : 1);
+  const cdiLo = Math.max(0, (cdiExtent && cdiExtent[0] != null) ? cdiExtent[0] : 0);
+  const cdiHi = Math.max(1, (cdiExtent && cdiExtent[1] != null) ? cdiExtent[1] : 1);
 
-  var mmiLo = Math.max(0, (mmiExtent && mmiExtent[0] != null) ? mmiExtent[0] : 0);
-  var mmiHi = Math.max(1, (mmiExtent && mmiExtent[1] != null) ? mmiExtent[1] : 1);
+  const mmiLo = Math.max(0, (mmiExtent && mmiExtent[0] != null) ? mmiExtent[0] : 0);
+  const mmiHi = Math.max(1, (mmiExtent && mmiExtent[1] != null) ? mmiExtent[1] : 1);
 
-  var sigLo = Math.max(0, (sigExtent && sigExtent[0] != null) ? sigExtent[0] : 0);
-  var sigHi = Math.max(1, (sigExtent && sigExtent[1] != null) ? sigExtent[1] : 1);
+  const sigLo = Math.max(0, (sigExtent && sigExtent[0] != null) ? sigExtent[0] : 0);
+  const sigHi = Math.max(1, (sigExtent && sigExtent[1] != null) ? sigExtent[1] : 1);
 
   sizeScale_mag = d3.scaleSqrt().domain([magLo, magHi]).range([SIZE.minPx, SIZE.maxPx]).clamp(true);
   sizeScale_cdi = d3.scaleSqrt().domain([cdiLo, cdiHi]).range([SIZE.minPx, SIZE.maxPx]).clamp(true);
@@ -418,28 +418,28 @@ function initScales() {
   sizeScale_sig = d3.scaleSqrt().domain([sigLo, sigHi]).range([SIZE.minPx, SIZE.maxPx]).clamp(true);
 
   // compute a high-ish depth for dark end of gradient (98th percentile)
-  var depths = [];
-  for (var i = 0; i < quakes.length; i++) depths.push(quakes[i].depth || 0);
+  const depths = [];
+  for (let i = 0; i < quakes.length; i++) depths.push(quakes[i].depth || 0);
   depths.sort(d3.ascending);
-  var q98 = d3.quantile(depths, 0.98);
-  var depthMaxGuess = Math.max(100, q98 || 700);
+  const q98 = d3.quantile(depths, 0.98);
+  const depthMaxGuess = Math.max(100, q98 || 700);
 
   // color gradient: base color -> black as depth increases
   depthShade = function (baseColor, depth) {
-    var val = (depth != null) ? depth : 0;
-    var t = Math.max(0, Math.min(1, val / depthMaxGuess));
+    const val = (depth != null) ? depth : 0;
+    const t = Math.max(0, Math.min(1, val / depthMaxGuess));
     return d3.interpolateRgb(baseColor, '#000')(t);
   };
 }
 
 // apply filters and draw
 function applyFiltersAndRender() {
-  var depLo = +depthMin.value, depHi = +depthMax.value;
-  var magLo = +magMin.value, magHi = +magMax.value;
-  var tsunamiOnly = !!onlyTsunami.checked;
+  const depLo = +depthMin.value, depHi = +depthMax.value;
+  const magLo = +magMin.value, magHi = +magMax.value;
+  const tsunamiOnly = !!onlyTsunami.checked;
 
   // pick the slice: bucket when slider is active, else all
-  var subset;
+  let subset;
   if (timeIndex >= 0 && timeBuckets.length) {
     subset = timeBuckets[timeIndex].values;
   } else {
@@ -448,9 +448,9 @@ function applyFiltersAndRender() {
 
   // now apply the other filters (same as before)
   filtered = subset.filter(function (d) {
-    var okDepth = (d.depth == null) ? true : (d.depth >= depLo && d.depth <= depHi);
-    var okMag   = (d.mag   == null) ? true : (d.mag   >= magLo && d.mag   <= magHi);
-    var okTsu   = tsunamiOnly ? (d.tsunami === 1) : true;
+    const okDepth = (d.depth == null) ? true : (d.depth >= depLo && d.depth <= depHi);
+    const okMag   = (d.mag   == null) ? true : (d.mag   >= magLo && d.mag   <= magHi);
+    const okTsu   = tsunamiOnly ? (d.tsunami === 1) : true;
     return okDepth && okMag && okTsu;
   });
 
@@ -459,13 +459,13 @@ function applyFiltersAndRender() {
 
 // draw the quake circles (with optional tsunami ring)
 function drawQuakes() {
-  var proj = currentBasemap.projection;
-  var checked = document.querySelector('input[name="sizeMode"]:checked');
-  var useOverall = checked ? (checked.value === 'overall') : false;
+  const proj = currentBasemap.projection;
+  const checked = document.querySelector('input[name="sizeMode"]:checked');
+  const useOverall = checked ? (checked.value === 'overall') : false;
 
   gQuake.selectAll('g.quake')
     .data(filtered, function (d, i) {
-      var t = (d.time && d.time.getTime) ? d.time.getTime() : i;
+      const t = (d.time && d.time.getTime) ? d.time.getTime() : i;
       return t + ':' + d.latitude + ',' + d.longitude;
     })
     .join(
@@ -473,7 +473,7 @@ function drawQuakes() {
         return enter.append('g')
           .attr('class', 'quake')
           .attr('transform', function (d) {
-            var pt = proj([d.longitude, d.latitude]);
+            const pt = proj([d.longitude, d.latitude]);
             return 'translate(' + pt[0] + ',' + pt[1] + ')';
           })
           .on('mouseenter', function (event, d) { showTooltip(event, d); })
@@ -482,7 +482,7 @@ function drawQuakes() {
       },
       function (update) {
         update.attr('transform', function (d) {
-          var pt = proj([d.longitude, d.latitude]);
+          const pt = proj([d.longitude, d.latitude]);
           return 'translate(' + pt[0] + ',' + pt[1] + ')';
         });
         return update;
@@ -490,12 +490,12 @@ function drawQuakes() {
       function (exit) { exit.remove(); }
     )
     .each(function (d) {
-      var g = d3.select(this);
+      const g = d3.select(this);
       g.selectAll('circle.ring').remove();
 
       if (useOverall) {
         // one circle using overall "sig"
-        var rSig = sizeScale_sig(d.sig != null ? d.sig : 0);
+        const rSig = sizeScale_sig(d.sig != null ? d.sig : 0);
         g.append('circle').attr('class', 'ring sig')
           .attr('r', rSig)
           .attr('fill', depthShade(COLORS.sig, d.depth))
@@ -513,11 +513,11 @@ function drawQuakes() {
             .attr('stroke-opacity', 0.9);
         }
       } else {
-        var showMag = chkMag.checked;
-        var showCDI = chkCDI.checked;
-        var showMMI = chkMMI.checked;
+        const showMag = chkMag.checked;
+        const showCDI = chkCDI.checked;
+        const showMMI = chkMMI.checked;
 
-        var rMag = 0, rCDI = 0, rMMI = 0;
+        let rMag = 0, rCDI = 0, rMMI = 0;
 
         if (showMag) {
           rMag = sizeScale_mag(d.mag != null ? d.mag : 0);
@@ -560,7 +560,7 @@ function drawQuakes() {
 
         // blue tsunami ring sized to the largest visible ring
         if (d.tsunami === 1) {
-          var rMax = Math.max(rMag || 0, rCDI || 0, rMMI || 0);
+          let rMax = Math.max(rMag || 0, rCDI || 0, rMMI || 0);
           if (rMax === 0) {
             // if we fell back to mag, use that
             rMax = sizeScale_mag(d.mag != null ? d.mag : 0);
@@ -578,16 +578,16 @@ function drawQuakes() {
 
 // tooltip stuff
 function showTooltip(event, d) {
-  var timeFmt = d3.timeFormat('%b %d, %Y %H:%M UTC');
+  const timeFmt = d3.timeFormat('%b %d, %Y %H:%M UTC');
 
-  var parts = [];
+  const parts = [];
   if (d.mag != null) parts.push('<span class="badge">M ' + (+d.mag).toFixed(1) + '</span>');
   if (d.depth != null) parts.push('<span class="badge">' + (+d.depth).toFixed(0) + ' km</span>');
   if (d.tsunami === 1) parts.push('<span class="badge" style="border-color:#743; color:#fbbf24">Tsunami</span>');
 
-  var barHtml = '';
+  let barHtml = '';
   if (d.dmin != null) {
-    var dminPct = Math.max(0, Math.min(1, d.dmin / 5));
+    const dminPct = Math.max(0, Math.min(1, d.dmin / 5));
     barHtml =
       '<div class="bar-wrap">' +
       '<div class="meta">Nearest station distance: ' + d.dmin.toFixed(2) + ' (scaled)</div>' +
@@ -609,7 +609,7 @@ function showTooltip(event, d) {
 function hideTooltip() { tip.classed('hidden', true); }
 
 function positionTooltip(event) {
-  var xy = d3.pointer(event, svg.node());
+  const xy = d3.pointer(event, svg.node());
   tip.style('left', xy[0] + 'px').style('top', xy[1] + 'px');
 }
 
@@ -619,7 +619,7 @@ function fmtNA(v) {
 
 // legend
 function renderLegend() {
-  var div = d3.select('main#viz').append('div').attr('class', 'legend');
+  const div = d3.select('main#viz').append('div').attr('class', 'legend');
 
   div.append('div').attr('class', 'row')
     .html('<div class="swatch mag"></div> <span>Magnitude (Richter)</span>');
@@ -648,7 +648,7 @@ function stepPlay() {
     btnPlay.textContent = 'Play';
     return;
   }
-  var next = timeIndex + 1;
+  const next = timeIndex + 1;
   if (next < timeBuckets.length) {
     setTimeSlider(next);
     applyFiltersAndRender();
