@@ -61,7 +61,8 @@ const depthMin = document.getElementById('depthMin');
 const depthMax = document.getElementById('depthMax');
 const depthMinVal = document.getElementById('depthMinVal');
 const depthMaxVal = document.getElementById('depthMaxVal');
-
+const depthRangeMinVal = document.getElementById('depthRangeMinVal');
+const depthRangeMaxVal = document.getElementById('depthRangeMaxVal');
 const magMin = document.getElementById('magMin');
 const magMax = document.getElementById('magMax');
 const magMinVal = document.getElementById('magMinVal');
@@ -69,6 +70,11 @@ const magMaxVal = document.getElementById('magMaxVal');
 
 const onlyTsunami = document.getElementById('onlyTsunami');
 const btnClearFilters = document.getElementById('btnClearFilters');
+
+// slider values
+let depthRangeMinValue = 0;
+let depthRangeMaxValue = 700;
+let depthRangeSlider;
 
 const btnWorld = document.getElementById('btnWorld');
 const btnNA = document.getElementById('btnNA');
@@ -97,11 +103,26 @@ for (let wr = 0; wr < windowRadios.length; wr++) {
 }
 
 // size mode radio handlers
+const comboMetricsGroup = document.getElementById('comboMetricsGroup');
+function updateComboMetricsVisibility() {
+  if (!comboMetricsGroup) return;
+  const checked = document.querySelector('input[name="sizeMode"]:checked');
+  if (checked && checked.value === 'combo') {
+    comboMetricsGroup.style.display = 'block';
+  } else {
+    comboMetricsGroup.style.display = 'none';
+  }
+}
+
 for (let sm = 0; sm < sizeModeInputs.length; sm++) {
   sizeModeInputs[sm].addEventListener('change', function () {
+    updateComboMetricsVisibility();
     applyFiltersAndRender();
   });
 }
+
+// Set initial visibility
+updateComboMetricsVisibility();
 
 // checkbox handlers
 const showChecks = [chkMag, chkCDI, chkMMI];
@@ -111,28 +132,93 @@ for (let sc = 0; sc < showChecks.length; sc++) {
   });
 }
 
-// filter inputs
-const filterEls = [depthMin, depthMax, magMin, magMax, onlyTsunami];
-for (let fe = 0; fe < filterEls.length; fe++) {
-  filterEls[fe].addEventListener('input', function () {
-    depthMinVal.textContent = depthMin.value;
-    depthMaxVal.textContent = depthMax.value;
-    magMinVal.textContent = (+magMin.value).toFixed(1);
-    magMaxVal.textContent = (+magMax.value).toFixed(1);
-    applyFiltersAndRender();
-  });
+// initialize depth range slider
+function initDepthRangeSlider() {
+  // Depth range slider - range slider with two handles (min and max)
+  depthRangeSlider = d3.sliderBottom()
+    .min(0)
+    .max(700)
+    .width(220)
+    .ticks(6)
+    .default([depthRangeMinValue, depthRangeMaxValue])
+    .fill("#1b9e77")
+    .on("onchange", function(val) {
+      // Ensure min <= max (handles can't swap)
+      depthRangeMinValue = Math.min(val[0], val[1]);
+      depthRangeMaxValue = Math.max(val[0], val[1]);
+      // Update display
+      depthRangeMinVal.textContent = Math.round(depthRangeMinValue);
+      depthRangeMaxVal.textContent = Math.round(depthRangeMaxValue);
+    });
+
+  d3.select("#depthRangeSlider")
+    .attr("width", 250)
+    .attr("height", 60)
+    .append("g")
+    .attr("transform", "translate(15,15)")
+    .call(depthRangeSlider);
+  
+  // Update initial display values
+  depthRangeMinVal.textContent = Math.round(depthRangeMinValue);
+  depthRangeMaxVal.textContent = Math.round(depthRangeMaxValue);
 }
 
+// Initialize depth range slider when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDepthRangeSlider);
+} else {
+  // DOM is already ready
+  initDepthRangeSlider();
+}
+
+// depth input handlers (keep existing inputs)
+depthMin.addEventListener('input', function () {
+  depthMinVal.textContent = depthMin.value;
+  applyFiltersAndRender();
+});
+
+depthMax.addEventListener('input', function () {
+  depthMaxVal.textContent = depthMax.value;
+  applyFiltersAndRender();
+});
+
+// magnitude input handlers (keep as separate inputs)
+magMin.addEventListener('input', function () {
+  magMinVal.textContent = (+magMin.value).toFixed(1);
+  applyFiltersAndRender();
+});
+
+magMax.addEventListener('input', function () {
+  magMaxVal.textContent = (+magMax.value).toFixed(1);
+  applyFiltersAndRender();
+});
+
+// tsunami filter
+onlyTsunami.addEventListener('input', applyFiltersAndRender);
+
 btnClearFilters.addEventListener('click', function () {
+  // Reset depth inputs
   depthMin.value = 0;
   depthMax.value = 700;
-  magMin.value = 0;
-  magMax.value = 10;
-  onlyTsunami.checked = false;
   depthMinVal.textContent = '0';
   depthMaxVal.textContent = '700';
+  
+  // Reset depth range slider
+  depthRangeMinValue = 0;
+  depthRangeMaxValue = 700;
+  if (depthRangeSlider) {
+    depthRangeSlider.value([depthRangeMinValue, depthRangeMaxValue]);
+  }
+  depthRangeMinVal.textContent = '0';
+  depthRangeMaxVal.textContent = '700';
+  
+  // Reset magnitude inputs
+  magMin.value = 0;
+  magMax.value = 10;
   magMinVal.textContent = '0.0';
   magMaxVal.textContent = '10.0';
+  
+  onlyTsunami.checked = false;
   applyFiltersAndRender();
 });
 
@@ -434,8 +520,10 @@ function initScales() {
 
 // apply filters and draw
 function applyFiltersAndRender() {
-  const depLo = +depthMin.value, depHi = +depthMax.value;
-  const magLo = +magMin.value, magHi = +magMax.value;
+  const depLo = +depthMin.value;
+  const depHi = +depthMax.value;
+  const magLo = +magMin.value;
+  const magHi = +magMax.value;
   const tsunamiOnly = !!onlyTsunami.checked;
 
   // pick the slice: bucket when slider is active, else all

@@ -83,6 +83,7 @@ aside h1 {
 .slider-row { display:grid; grid-template-columns:1fr; gap:6px; margin:8px 0; }
 .slider-row label { color:var(--muted); font-size:12px; }
 .slider-row input[type="range"] { width:100%; }
+.slider-row svg { display:block; }
 .slider-values { font-size:12px; color:var(--muted); }
 
 .toggle-row { margin:6px 0 8px; }
