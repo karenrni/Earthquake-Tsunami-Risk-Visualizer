@@ -679,7 +679,6 @@ function showTooltip(event, d) {
     barHtml =
       '<div class="bar-wrap">' +
       '<div class="meta">Nearest station distance: ' + d.dmin.toFixed(2) + ' (scaled)</div>' +
-      '<div class="bar-bg"><div class="bar" style="width:' + (dminPct * 100).toFixed(0) + '%"></div></div>' +
       '</div>';
   }
 
