@@ -34,6 +34,7 @@ let depthShade;
 
 const svg = d3.select('#map');
 const gLand = svg.append('g').attr('class', 'land');
+const gPlates = svg.append('g').attr('class', 'plates');
 const gQuake = svg.append('g').attr('class', 'quakes');
 const tip = d3.select('#tooltip');
 
@@ -257,11 +258,16 @@ btnShowAll.addEventListener('click', function () {
 Promise.all([
   d3.json(FILES.world),
   d3.json(FILES.na),
-  d3.csv(FILES.quakes, autoTypeQuake)
+  d3.csv(FILES.quakes, autoTypeQuake),
+  d3.json('https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json').catch(function(err) {
+    console.warn('Could not load tectonic plate data:', err);
+    return null;
+  })
 ]).then(function (all) {
   const world = all[0];
   const na = all[1];
   const rows = all[2];
+  const plates = all[3];
 
   // keep only rows with valid lat/lon
   quakes = rows.filter(function (d) {
@@ -272,6 +278,10 @@ Promise.all([
 
   WORLD_INIT.feature = toGeo(world);
   NA_INIT.feature = toGeo(na);
+  if (plates && plates.features) {
+    WORLD_INIT.plates = plates;
+    NA_INIT.plates = plates;
+  }
 
   loadBasemap(WORLD_INIT);
 
@@ -349,6 +359,7 @@ function loadBasemap(target) {
   const feats = (currentBasemap && currentBasemap.feature && currentBasemap.feature.features) ? currentBasemap.feature.features : [];
   const pathGen = d3.geoPath(currentBasemap.projection);
 
+  // Draw land/countries
   gLand.selectAll('path.country')
     .data(feats, function (d) {
       return (d.id || (d.properties && (d.properties.adm0_a3 || d.properties.name)));
@@ -367,6 +378,33 @@ function loadBasemap(target) {
       },
       function (exit) { exit.remove(); }
     );
+
+  // Draw tectonic plate boundaries
+  if (currentBasemap.plates && currentBasemap.plates.features) {
+    const plateFeatures = currentBasemap.plates.features;
+    gPlates.selectAll('path.plate-boundary')
+      .data(plateFeatures, function(d, i) {
+        return d.id || i;
+      })
+      .join(
+        function (enter) {
+          return enter.append('path')
+            .attr('class', 'plate-boundary')
+            .attr('fill', 'none')
+            .attr('stroke', '#dc2626')
+            .attr('stroke-width', 1.5)
+            .attr('stroke-opacity', 0.7)
+            .attr('d', pathGen);
+        },
+        function (update) {
+          return update.attr('d', pathGen);
+        },
+        function (exit) { exit.remove(); }
+      );
+  } else {
+    // Clear plates if not available
+    gPlates.selectAll('path.plate-boundary').remove();
+  }
 }
 
 // group quakes into monthly or yearly buckets
