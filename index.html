@@ -77,32 +77,43 @@
         </div>
 
         <div class="group">
-            <div class="group-title">Map View</div>
-            <div class="map-buttons">
-                <button id="btnWorld" class="primary">World</button>
-                <button id="btnNA" class="primary">North America</button>
-            </div>
-        </div>
-
-        <div class="group">
-            <div class="group-title">Time Range</div>
+            <div class="group-title">Window</div>
             <div class="radio-row">
-                <label class="radio"><input type="radio" name="window" value="month" checked> Monthly</label>
-                <label class="radio"><input type="radio" name="window" value="year"> Yearly</label>
+                <label class="radio"><input type="radio" name="window" value="month"> Monthly</label>
+                <label class="radio"><input type="radio" name="window" value="year" checked> Yearly</label>
             </div>
-            <div id="timeline">
-                <button id="btnPrev" title="Previous">&#9664;</button>
-                <input type="range" id="timeSlider" min="0" max="0" step="1" value="0" disabled>
-                <button id="btnNext" title="Next">&#9654;</button>
-                <button id="btnPlay" title="Play/Pause">Play</button>
-            </div>
-            <div id="timeLabel">—</div>
-            <button id="btnShowAll" class="ghost">View All Time Periods</button>
         </div>
     </aside>
 
     <main id="viz">
         <svg id="map" role="img" aria-label="Earthquake map"></svg>
+
+        <!-- Zoom controls -->
+        <div id="zoomControls" aria-label="Map zoom controls">
+            <div id="zoomStatus">1.0×</div>
+            <button id="zoomIn" title="Zoom in">+</button>
+            <button id="zoomOut" title="Zoom out">−</button>
+            <button id="zoomReset" title="Fit to World">⟳</button>
+        </div>
+
+        <!-- Color legend is injected by JS -->
+
+        <!-- Timeline overlay at bottom of map -->
+        <div id="mapTimeline" role="group" aria-label="Timeline controls">
+            <div class="timeline-row">
+                <button id="btnPrev" title="Previous">&#9664;</button>
+                <input type="range" id="timeSlider" min="0" max="0" step="1" value="0" disabled>
+                <button id="btnNext" title="Next">&#9654;</button>
+                <button id="btnPlay" title="Play/Pause">Play</button>
+                <button id="btnShowAll" class="ghost" title="Show all">All</button>
+            </div>
+            <div id="timeLabel">—</div>
+            <div class="map-buttons small">
+                <button id="btnWorld" class="primary">World</button>
+                <button id="btnNA" class="primary">North America</button>
+            </div>
+        </div>
+
         <div id="tooltip" class="hidden" role="dialog" aria-live="polite"></div>
     </main>
 </div>
