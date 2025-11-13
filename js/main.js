@@ -894,7 +894,7 @@ function drawBackgrounds() {
   const maxX = bounds[1][0];
   const maxY = bounds[1][1];
   
-  const paddingX = 20;  // horizontal padding
+  const paddingX = 25;  // horizontal padding
   const paddingY = 4;  // vertical padding 
   
   const width = (maxX - minX) + (paddingX * 2);
