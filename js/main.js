@@ -725,13 +725,13 @@ function drawBackgrounds() {
   const maxX = bounds[1][0];
   const maxY = bounds[1][1];
   
-  const paddingX = 10;  // horizontal padding
-  const paddingY = 2;  // vertical padding 
+  const paddingX = 20;  // horizontal padding
+  const paddingY = 4;  // vertical padding 
   
   const width = (maxX - minX) + (paddingX * 2);
   const height = (maxY - minY) + (paddingY * 2);
   const x = minX - paddingX;
-  const y = minY - paddingY - 1.6;
+  const y = minY - paddingY - 3;
   const radius = height / 2; // radius for rounded corners
   
   // Create a rounded rectangle
