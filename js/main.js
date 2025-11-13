@@ -37,6 +37,8 @@ const svg = d3.select('#map');
 
 /* Draw order: plates (back), land, quakes (top) */
 const gRoot   = svg.append('g').attr('class', 'root');
+const gBackground = gRoot.append('g').attr('class', 'background');
+const gOval       = gRoot.append('g').attr('class', 'oval');
 const gPlates = gRoot.append('g').attr('class', 'plates');
 const gLand   = gRoot.append('g').attr('class', 'land');
 const gQuake  = gRoot.append('g').attr('class', 'quakes');
@@ -278,6 +280,7 @@ Promise.all([
     setTimeSlider(-1);
 
     resize();
+    drawBackgrounds();
     applyFiltersAndRender();
     renderLegend();
 
@@ -697,5 +700,55 @@ function stepPlay() {
     setTimeout(stepPlay, 900);
 }
 
+// draw background and oval
+function drawBackgrounds() {
+  const v = viewportSize();
+  
+  // Calculate shape based on the bounds of the map features
+  const projection = currentBasemap.projection;
+  const pathGen = d3.geoPath(projection);
+  
+  let bounds;
+  if (currentBasemap && currentBasemap.feature) {
+      bounds = pathGen.bounds(currentBasemap.feature);
+  } else {
+      bounds = [[v.w * 0.1, v.h * 0.1], [v.w * 0.9, v.h * 0.9]];
+  }
+  
+  const minX = bounds[0][0];
+  const minY = bounds[0][1];
+  const maxX = bounds[1][0];
+  const maxY = bounds[1][1];
+  
+  const paddingX = 10;  // horizontal padding
+  const paddingY = 2;  // vertical padding 
+  
+  const width = (maxX - minX) + (paddingX * 2);
+  const height = (maxY - minY) + (paddingY * 2);
+  const x = minX - paddingX;
+  const y = minY - paddingY - 1.6;
+  const radius = height / 2; // radius for rounded corners
+  
+  // Create a rounded rectangle
+  const path = `
+      M ${x + radius},${y}
+      L ${x + width - radius},${y}
+      A ${radius},${radius} 0 0 1 ${x + width - radius},${y + height}
+      L ${x + radius},${y + height}
+      A ${radius},${radius} 0 0 1 ${x + radius},${y}
+      Z
+  `;
+  
+  gOval.selectAll('path.ocean-shape')
+      .data([1])
+      .join('path')
+      .attr('class', 'ocean-shape')
+      .attr('d', path)
+      .attr('fill', '#93c5fd'); // '#60a5fa' darker 
+}
+
 // draw wrapper
-function drawAll() { drawQuakes(); }
+function drawAll() { 
+  drawBackgrounds();
+  drawQuakes(); 
+}
