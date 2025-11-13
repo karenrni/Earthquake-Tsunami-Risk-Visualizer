@@ -19,6 +19,38 @@ const COLORS = {
 // projections
 const WORLD_INIT = { type: 'world', projection: d3.geoNaturalEarth1() };
 const NA_INIT = { type: 'na', projection: d3.geoAlbers().parallels([29.5, 45.5]).rotate([98, 0]).center([0, 38]) };
+// Additional REGIONS
+// Additional zoom regions (Mercator – tuned manually)
+const INDONESIA_INIT = {
+  type: 'indo',
+  projection: d3.geoMercator()
+      .center([120, -3])    // Indonesia core
+      .scale(1450)
+};
+
+const JAPAN_INIT = {
+  type: 'japan',
+  projection: d3.geoMercator()
+      .center([138, 38])    // Japan megathrust
+      .scale(2000)
+};
+
+const ANDES_INIT = {
+  type: 'andes',
+  projection: d3.geoMercator()
+      .center([-72, -23])   // Chile–Peru subduction zone
+      .scale(1650)
+};
+
+const NZ_INIT = {
+  type: 'nz',
+  projection: d3.geoMercator()
+      .center([172, -41])   // New Zealand
+      .scale(2700)
+};
+
+
+
 
 // app state
 let currentBasemap = WORLD_INIT;
@@ -137,6 +169,30 @@ let depthRangeSlider;
 
 const btnWorld = document.getElementById('btnWorld');
 const btnNA = document.getElementById('btnNA');
+btnIndonesia.addEventListener('click', function () { 
+  loadBasemap(INDONESIA_INIT); 
+  resetZoom(); 
+  drawAll(); 
+});
+
+btnJapan.addEventListener('click', function () { 
+  loadBasemap(JAPAN_INIT); 
+  resetZoom(); 
+  drawAll(); 
+});
+
+btnAndes.addEventListener('click', function () { 
+  loadBasemap(ANDES_INIT); 
+  resetZoom(); 
+  drawAll(); 
+});
+
+btnNZ.addEventListener('click', function () { 
+  loadBasemap(NZ_INIT); 
+  resetZoom(); 
+  drawAll(); 
+});
+
 
 const timeSlider = document.getElementById('timeSlider');
 const btnPrev = document.getElementById('btnPrev');
@@ -298,7 +354,20 @@ Promise.all([
 
     WORLD_INIT.feature = toGeo(world);
     NA_INIT.feature = toGeo(na);
-    if (plates && plates.features) { WORLD_INIT.plates = plates; NA_INIT.plates = plates; }
+    INDONESIA_INIT.feature = WORLD_INIT.feature;
+    JAPAN_INIT.feature = WORLD_INIT.feature;
+    ANDES_INIT.feature = WORLD_INIT.feature;
+    NZ_INIT.feature = WORLD_INIT.feature;
+
+    if (plates && plates.features) {
+      WORLD_INIT.plates      = plates;
+      NA_INIT.plates         = plates;
+      INDONESIA_INIT.plates  = plates;
+      JAPAN_INIT.plates      = plates;
+      ANDES_INIT.plates      = plates;
+      NZ_INIT.plates         = plates;
+  }
+
 
     loadBasemap(WORLD_INIT);
 
@@ -368,8 +437,13 @@ function loadBasemap(target) {
     svg.attr('width', v.w).attr('height', v.h);
 
     if (currentBasemap && currentBasemap.feature) {
-        currentBasemap.projection.fitSize([v.w, v.h], currentBasemap.feature);
-    }
+      // Only auto-fit for WORLD and North America
+      if (currentBasemap.type === 'world' || currentBasemap.type === 'na') {
+          currentBasemap.projection.fitSize([v.w, v.h], currentBasemap.feature);
+      }
+      // For custom zoom regions, DO NOT auto-fit
+  }
+  
 
     const feats = (currentBasemap && currentBasemap.feature && currentBasemap.feature.features) ? currentBasemap.feature.features : [];
     const pathGen = d3.geoPath(currentBasemap.projection);
