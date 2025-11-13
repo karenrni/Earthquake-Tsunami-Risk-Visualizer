@@ -603,7 +603,7 @@ function drawQuakes() {
     });
 
     // draw rings
-    rowsAll.each(function (d) {
+      rowsAll.each(function (d) {
         const container = d3.select(this).select('g.rings');
         container.selectAll('circle.ring').remove();
 
@@ -656,6 +656,18 @@ function drawQuakes() {
                 container.select('circle.tsunami').attr('fill', 'none').attr('stroke-width', 1.5);
             }
         }
+    });
+
+    // fix for zoom layering and tooltip 
+    rowsAll
+    .on("mouseover", function(event, d) {
+        showTooltip(event, d);
+    })
+    .on("mousemove", function(event, d) {
+        positionTooltip(event);
+    })
+    .on("mouseout", function() {
+        hideTooltip();
     });
 
     // ENTER FADE-IN ONLY
