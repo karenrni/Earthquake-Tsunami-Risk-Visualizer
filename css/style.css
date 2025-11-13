@@ -97,6 +97,14 @@ main#viz { position:relative; min-height:70vh; background:#e0f2fe; }
 #mapTimeline .small button { padding:6px 8px; font-size:12px; }
 #timeLabel { font-size:13px; color:var(--muted); }
 
+#btnClearFilters {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--ring);
+    background: #fff;
+    font-weight: 600;
+}
+
 /* badge */
 .badge { display:inline-block; padding:2px 6px; border-radius:6px; background:#f3f4f6; border:1px solid var(--ring); color:var(--ink); font-size:11px; }
 
