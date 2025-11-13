@@ -717,12 +717,65 @@ function fmtNA(v) { return (v == null || Number.isNaN(v)) ? '—' : (+v).toFixed
 
 // color legend
 function renderLegend() {
-    const div = d3.select('main#viz').append('div').attr('class', 'legend color-legend');
-    div.append('div').attr('class', 'row').html('<div class="swatch mag"></div> <span>Magnitude (Richter)</span>');
-    div.append('div').attr('class', 'row').html('<div class="swatch cdi"></div> <span>CDI (felt)</span>');
-    div.append('div').attr('class', 'row').html('<div class="swatch mmi"></div> <span>MMI (damage)</span>');
-    div.append('div').attr('class', 'row').html('<div class="swatch sig"></div> <span>Significance (overall)</span>');
+  // --- COLOR LEGEND ---
+  const colorDiv = d3.select('#colorLegend');
+  colorDiv.html(''); // clear
+  
+  const colors = [
+      { cls:"mag", label:"Magnitude (Richter)", color:COLORS.mag },
+      { cls:"cdi", label:"CDI (felt)", color:COLORS.cdi },
+      { cls:"mmi", label:"MMI (damage)", color:COLORS.mmi },
+      { cls:"sig", label:"Significance (overall)", color:COLORS.sig }
+  ];
+
+  colors.forEach(c => {
+      colorDiv.append("div")
+          .attr("class", "legend-row")
+          .html(`
+              <div class="swatch" style="background:${c.color}"></div>
+              <span>${c.label}</span>
+          `);
+  });
+
+
+  // --- CIRCLE SIZE LEGEND (SIG MODE) ---
+  const sizeDiv = d3.select('#sizeLegend');
+  sizeDiv.html('<div class="legend-subtitle">Circle Size (Significance)</div>');
+
+  const svg = sizeDiv.append("svg");
+  const values = [0, 300, 600, 1000];  // sample sig values
+  const x = 50;
+
+  values.forEach((v, i) => {
+      const r = sizeScale_sig(v);
+      svg.append("circle")
+          .attr("class","size-circle")
+          .attr("cx", x + i*50)
+          .attr("cy", 40)
+          .attr("r", r);
+
+      svg.append("text")
+          .attr("x", x + i*50)
+          .attr("y", 70)
+          .attr("text-anchor","middle")
+          .attr("font-size","10px")
+          .attr("fill","var(--muted)")
+          .text(v);
+  });
+
+
+  // --- GRADIENT LEGEND FOR SIGNIFICANCE (DEPTH SHADING OR OVERALL MODE) ---
+  const gradDiv = d3.select('#sigGradientLegend');
+  gradDiv.html(`
+      <div class="legend-subtitle">Depth Shading / Overall Sig Color</div>
+      <div class="gradient-bar"></div>
+      <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-top:4px;">
+          <span>Shallow / low sig</span>
+          <span>Deep / high sig</span>
+      </div>
+  `);
 }
+
 
 // play/pause (looping)
 function togglePlay() {
