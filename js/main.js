@@ -703,6 +703,11 @@ function stepPlay() {
 // draw background and oval
 function drawBackgrounds() {
   const v = viewportSize();
+
+  if (currentBasemap.type !== 'world') {
+    gOval.selectAll('path.ocean-shape').remove();
+    return;
+}
   
   // Calculate shape based on the bounds of the map features
   const projection = currentBasemap.projection;
