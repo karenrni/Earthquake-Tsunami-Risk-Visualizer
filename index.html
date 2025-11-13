@@ -7,14 +7,17 @@
     <link rel="stylesheet" href="css/style.css"/>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/topojson-client@3"></script>
+    <script src="https://unpkg.com/d3-simple-slider"></script>
 </head>
+
 <body>
 <div id="app">
+
+    <!-- SIDEBAR -->
     <aside id="controls">
         <h1>Global Earthquake Visualizer
             <img class="icon" src="fonts/overall.png" alt="Overall icon" style="width: 32px; height: 32px;">
         </h1>
-        
 
         <div class="group">
             <div class="group-title">Circle Size mode</div>
@@ -32,17 +35,17 @@
             <div class="group-title">Customize Circle Rings</div>
             <label class="checkbox">
                 <input type="checkbox" id="chk-mag" checked>
-                <img class="icon" src="fonts/wave.png" alt="Magnitude icon" width="22" height="22">
+                <img class="icon" src="fonts/wave.png" width="22" height="22">
                 Richter magnitude
             </label>
             <label class="checkbox">
                 <input type="checkbox" id="chk-cdi" checked>
-                <img class="icon" src="fonts/stickman.png" alt="CDI icon" width="22" height="22">
+                <img class="icon" src="fonts/stickman.png" width="22" height="22">
                 CDI (felt)
             </label>
             <label class="checkbox">
                 <input type="checkbox" id="chk-mmi" checked>
-                <img class="icon" src="fonts/building.png" alt="MMI icon" width="22" height="22">
+                <img class="icon" src="fonts/building.png" width="22" height="22">
                 MMI (damage)
             </label>
         </div>
@@ -52,31 +55,29 @@
 
             <div class="slider-row">
                 <label>Depth Range (km)</label>
-                <input type="range" id="depthMin" min="0" max="700" step="5" value="0">
-                <input type="range" id="depthMax" min="0" max="700" step="5" value="700">
+                <svg id="depthRangeSlider" width="280" height="50"></svg>
                 <div class="slider-values">
-                    <span id="depthMinVal">0</span>–<span id="depthMaxVal">700</span>
+                    <span id="depthRangeMinVal">0</span>–<span id="depthRangeMaxVal">700</span> km
                 </div>
             </div>
 
             <div class="slider-row">
                 <label>Magnitude Range (Richter)</label>
-                <input type="range" id="magMin" min="0" max="10" step="0.1" value="0">
-                <input type="range" id="magMax" min="0" max="10" step="0.1" value="10">
+                <svg id="magRangeSlider" width="280" height="50"></svg>
                 <div class="slider-values">
-                    <span id="magMinVal">0.0</span>–<span id="magMaxVal">10.0</span>
+                    <span id="magRangeMinVal">0.0</span>–<span id="magRangeMaxVal">10.0</span>
                 </div>
             </div>
-
-            <div class="toggle-row">
-                <label class="checkbox">
-                    <input type="checkbox" id="onlyTsunami">
-                    Show Only Tsunami Events
-                </label>
-            </div>
-
-            <button id="btnClearFilters" >Clear All Filters</button>
         </div>
+
+        <div class="toggle-row">
+            <label class="checkbox">
+                <input type="checkbox" id="onlyTsunami">
+                Show Only Tsunami Events
+            </label>
+        </div>
+
+        <button id="btnClearFilters">Clear All Filters</button>
 
         <div class="group">
             <div class="group-title">Window</div>
@@ -87,10 +88,10 @@
         </div>
     </aside>
 
+    <!-- MAP -->
     <main id="viz">
         <svg id="map" role="img" aria-label="Earthquake map"></svg>
 
-        <!-- Zoom controls -->
         <div id="zoomControls" aria-label="Map zoom controls">
             <div id="zoomStatus">1.0×</div>
             <button id="zoomIn" title="Zoom in">+</button>
@@ -98,9 +99,6 @@
             <button id="zoomReset" title="Fit to World">⟳</button>
         </div>
 
-        <!-- Color legend is injected by JS -->
-
-        <!-- Timeline overlay at bottom of map -->
         <div id="mapTimeline" role="group" aria-label="Timeline controls">
             <div class="timeline-row">
                 <button id="btnPrev" title="Previous">&#9664;</button>
@@ -110,6 +108,7 @@
                 <button id="btnShowAll" class="ghost" title="Show all">All</button>
             </div>
             <div id="timeLabel">—</div>
+
             <div class="map-buttons small">
                 <button id="btnWorld" class="primary">World</button>
                 <button id="btnNA" class="primary">North America</button>
@@ -118,8 +117,9 @@
 
         <div id="tooltip" class="hidden" role="dialog" aria-live="polite"></div>
     </main>
+
 </div>
 
-<script src="js/main.js"></script>
+<script src="js/main.js" defer></script>
 </body>
 </html>

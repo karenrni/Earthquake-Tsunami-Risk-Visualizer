@@ -120,22 +120,19 @@ function updateZoomUI() {
 }
 
 // ui refs
-const depthMin = document.getElementById('depthMin');
-const depthMax = document.getElementById('depthMax');
-const depthMinVal = document.getElementById('depthMinVal');
-const depthMaxVal = document.getElementById('depthMaxVal');
 const depthRangeMinVal = document.getElementById('depthRangeMinVal');
 const depthRangeMaxVal = document.getElementById('depthRangeMaxVal');
-const magMin = document.getElementById('magMin');
-const magMax = document.getElementById('magMax');
-const magMinVal = document.getElementById('magMinVal');
-const magMaxVal = document.getElementById('magMaxVal');
+const magRangeMinVal   = document.getElementById('magRangeMinVal');
+const magRangeMaxVal   = document.getElementById('magRangeMaxVal');
 
 const onlyTsunami = document.getElementById('onlyTsunami');
 const btnClearFilters = document.getElementById('btnClearFilters');
 
 let depthRangeMinValue = 0;
 let depthRangeMaxValue = 700;
+let magRangeMinValue = 0;
+let magRangeMaxValue = 10;
+
 let depthRangeSlider;
 
 const btnWorld = document.getElementById('btnWorld');
@@ -186,50 +183,80 @@ for (let sc = 0; sc < showChecks.length; sc++) {
         applyFiltersAndRender();
     });
 }
+// Depth range slider
 
-// optional depth range slider (no-op if not present)
-function initDepthRangeSlider() {
-    if (typeof d3.sliderBottom !== 'function') return;
-    const container = d3.select('#depthRangeSlider');
-    if (container.empty()) return;
+const depthSlider = d3.sliderBottom()
+    .min(0)
+    .max(700)
+    .width(240)
+    .tickFormat(d3.format('.0f'))
+    .ticks(5)
+    .default([0, 700])
+    .fill('#1b9e77')
+    .on('onchange', val => {
+        depthRangeMinValue = val[0];
+        depthRangeMaxValue = val[1];
+        depthRangeMinVal.textContent = Math.round(val[0]);
+        depthRangeMaxVal.textContent = Math.round(val[1]);
+        applyFiltersAndRender();
+    });
 
-    depthRangeSlider = d3.sliderBottom()
-        .min(0).max(700).width(220).ticks(6)
-        .default([depthRangeMinValue, depthRangeMaxValue])
-        .fill("#1b9e77")
-        .on("onchange", function(val) {
-            depthRangeMinValue = Math.min(val[0], val[1]);
-            depthRangeMaxValue = Math.max(val[0], val[1]);
-            if (depthRangeMinVal) depthRangeMinVal.textContent = Math.round(depthRangeMinValue);
-            if (depthRangeMaxVal) depthRangeMaxVal.textContent = Math.round(depthRangeMaxValue);
-        });
+d3.select('#depthRangeSlider')
+    .append('g')
+    .attr('transform', 'translate(20,10)')
+    .call(depthSlider);
 
-    container.attr("width", 250).attr("height", 60)
-        .append("g").attr("transform", "translate(15,15)")
-        .call(depthRangeSlider);
+// Magnitude range slider
 
-    if (depthRangeMinVal) depthRangeMinVal.textContent = Math.round(depthRangeMinValue);
-    if (depthRangeMaxVal) depthRangeMaxVal.textContent = Math.round(depthRangeMaxValue);
-}
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDepthRangeSlider); else initDepthRangeSlider();
+const magRangeSlider = d3.sliderBottom()
+    .min(0)
+    .max(10)
+    .width(240)
+    .tickFormat(d3.format('.1f'))
+    .ticks(5)
+    .default([0, 10])
+    .fill('#d95f02')
+    .on('onchange', val => {
+        magRangeMinValue = val[0];
+        magRangeMaxValue = val[1];
+        magRangeMinVal.textContent = val[0].toFixed(1);
+        magRangeMaxVal.textContent = val[1].toFixed(1);
+        applyFiltersAndRender();
+    });
+
+d3.select('#magRangeSlider')
+    .append('g')
+    .attr('transform', 'translate(20,10)')
+    .call(magRangeSlider);
 
 // filter handlers
-depthMin.addEventListener('input', function () { depthMinVal.textContent = depthMin.value; applyFiltersAndRender(); });
-depthMax.addEventListener('input', function () { depthMaxVal.textContent = depthMax.value; applyFiltersAndRender(); });
-magMin.addEventListener('input', function () { magMinVal.textContent = (+magMin.value).toFixed(1); applyFiltersAndRender(); });
-magMax.addEventListener('input', function () { magMaxVal.textContent = (+magMax.value).toFixed(1); applyFiltersAndRender(); });
-onlyTsunami.addEventListener('input', applyFiltersAndRender);
+// depthMin.addEventListener('input', function () { depthMinVal.textContent = depthMin.value; applyFiltersAndRender(); });
+// depthMax.addEventListener('input', function () { depthMaxVal.textContent = depthMax.value; applyFiltersAndRender(); });
+// magMin.addEventListener('input', function () { magMinVal.textContent = (+magMin.value).toFixed(1); applyFiltersAndRender(); });
+// magMax.addEventListener('input', function () { magMaxVal.textContent = (+magMax.value).toFixed(1); applyFiltersAndRender(); });
+// onlyTsunami.addEventListener('input', applyFiltersAndRender);
 
 btnClearFilters.addEventListener('click', function () {
-    depthMin.value = 0; depthMax.value = 700; depthMinVal.textContent = '0'; depthMaxVal.textContent = '700';
-    depthRangeMinValue = 0; depthRangeMaxValue = 700;
-    if (depthRangeSlider) depthRangeSlider.value([depthRangeMinValue, depthRangeMaxValue]);
-    if (depthRangeMinVal) depthRangeMinVal.textContent = '0';
-    if (depthRangeMaxVal) depthRangeMaxVal.textContent = '700';
-    magMin.value = 0; magMax.value = 10; magMinVal.textContent = '0.0'; magMaxVal.textContent = '10.0';
-    onlyTsunami.checked = false;
-    applyFiltersAndRender();
+  // reset depth range [0, 700]
+  depthRangeMinValue = 0;
+  depthRangeMaxValue = 700;
+  depthSlider.value([depthRangeMinValue, depthRangeMaxValue]);
+  depthRangeMinVal.textContent = '0';
+  depthRangeMaxVal.textContent = '700';
+
+  // reset magnitude range [0, 10]
+  magRangeMinValue = 0;
+  magRangeMaxValue = 10;
+  magRangeSlider.value([magRangeMinValue, magRangeMaxValue]);
+  magRangeMinVal.textContent = '0.0';
+  magRangeMaxVal.textContent = '10.0';
+
+  // // reset tsunami-only toggle
+  // onlyTsunami.checked = false;
+
+  applyFiltersAndRender();
 });
+
 
 // map view buttons
 btnWorld.addEventListener('click', function () { loadBasemap(WORLD_INIT); resetZoom(); drawAll(); });
@@ -515,12 +542,15 @@ function initScales() {
     };
 }
 
+
+
 // filter + draw
 function applyFiltersAndRender() {
-    const depLo = +depthMin.value;
-    const depHi = +depthMax.value;
-    const magLo = +magMin.value;
-    const magHi = +magMax.value;
+
+    const depLo = depthRangeMinValue;  // Use these instead
+    const depHi = depthRangeMaxValue;
+    const magLo = magRangeMinValue;
+    const magHi = magRangeMaxValue;
     const tsunamiOnly = !!onlyTsunami.checked;
 
     let subset;
