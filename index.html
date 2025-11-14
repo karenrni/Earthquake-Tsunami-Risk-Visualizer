@@ -1,137 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>D3 Earthquakes & Tsunamis — Interactive Map</title>
-    <link rel="stylesheet" href="css/style.css"/>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://unpkg.com/topojson-client@3"></script>
-    <script src="https://unpkg.com/d3-simple-slider"></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>D3 Earthquakes & Tsunamis — Interactive Map</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+  <script src="https://unpkg.com/d3-simple-slider"></script>
+  <style>
+    /* fade for intro overlay */
+    #introOverlay {
+      opacity: 1;
+      transition: opacity 0.35s ease;
+    }
+    #introOverlay.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
 </head>
 
 <body>
-<div id="app">
+  <div id="app">
 
     <!-- SIDEBAR -->
     <aside id="controls">
-        <h1>Global Earthquake Visualizer
-            <img class="icon" src="fonts/overall.png" alt="Overall icon" style="width: 32px; height: 32px;">
-        </h1>
+      <h1>Global Earthquake Visualizer
+        <img class="icon" src="fonts/overall.png" alt="Overall icon" style="width: 32px; height: 32px;">
+      </h1>
 
-        <div class="group">
-            <div class="group-title">Circle Size mode</div>
-            <label class="radio">
-                <input type="radio" name="sizeMode" value="overall" checked>
-                Overall Impact
-            </label>
-            <label class="radio">
-                <input type="radio" name="sizeMode" value="combo">
-                Separate Metrics
-            </label>
+      <!-- LEGEND now above Filters -->
+      <div class="group" id="legendPanel">
+        <div class="group-title">Legends</div>
+        <div id="colorLegend"></div>
+        <div id="sizeLegend"></div>
+        <div id="depthLegend"></div>
+        <div id="tsunamiLegend"></div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">Circle Size Mode</div>
+        <label class="radio">
+          <input type="radio" name="sizeMode" value="overall" checked>
+          Overall Impact
+        </label>
+        <label class="radio">
+          <input type="radio" name="sizeMode" value="combo">
+          Separate Metrics
+        </label>
+      </div>
+
+      <div class="group group-icons" id="comboMetricsGroup" style="display: none;">
+        <div class="group-title">Customize Circle Rings</div>
+        <label class="checkbox" title="Magnitude (Richter Scale) — the amount of energy released by the earthquake.">
+          <input type="checkbox" id="chk-mag" checked>
+          <img class="icon" src="fonts/wave.png" width="22" height="22">
+          Magnitude (Richter Scale)
+        </label>
+        <label class="checkbox" title="CDI (Felt Intensity) — how strongly people reported feeling the shaking.">
+          <input type="checkbox" id="chk-cdi" checked>
+          <img class="icon" src="fonts/stickman.png" width="22" height="22">
+          CDI (Felt Intensity)
+        </label>
+        <label class="checkbox" title="MMI (Structural Intensity) — observed damage to buildings and infrastructure.">
+          <input type="checkbox" id="chk-mmi" checked>
+          <img class="icon" src="fonts/building.png" width="22" height="22">
+          MMI (Structural Intensity)
+        </label>
+      </div>
+
+      <div class="group">
+        <div class="group-title">Filters</div>
+
+        <div class="slider-row">
+          <label>Depth Range (km)</label>
+          <svg id="depthRangeSlider" width="280" height="50"></svg>
+          <div class="slider-values">
+            <span id="depthRangeMinVal">0</span>–<span id="depthRangeMaxVal">700</span> km
+          </div>
         </div>
 
-        <div class="group group-icons" id="comboMetricsGroup" style="display: none;">
-            <div class="group-title">Customize Circle Rings</div>
-            <label class="checkbox">
-                <input type="checkbox" id="chk-mag" checked>
-                <img class="icon" src="fonts/wave.png" width="22" height="22">
-                Richter magnitude
-            </label>
-            <label class="checkbox">
-                <input type="checkbox" id="chk-cdi" checked>
-                <img class="icon" src="fonts/stickman.png" width="22" height="22">
-                CDI (felt)
-            </label>
-            <label class="checkbox">
-                <input type="checkbox" id="chk-mmi" checked>
-                <img class="icon" src="fonts/building.png" width="22" height="22">
-                MMI (damage)
-            </label>
-        </div>
-
-        <div class="group">
-            <div class="group-title">Filters</div>
-
-            <div class="slider-row">
-                <label>Depth Range (km)</label>
-                <svg id="depthRangeSlider" width="280" height="50"></svg>
-                <div class="slider-values">
-                    <span id="depthRangeMinVal">0</span>–<span id="depthRangeMaxVal">700</span> km
-                </div>
-            </div>
-
-            <div class="slider-row">
-                <label>Magnitude Range (Richter)</label>
-                <svg id="magRangeSlider" width="280" height="50"></svg>
-                <div class="slider-values">
-                    <span id="magRangeMinVal">0.0</span>–<span id="magRangeMaxVal">10.0</span>
-                </div>
-            </div>
+        <div class="slider-row">
+          <label>Magnitude Range (Richter)</label>
+          <svg id="magRangeSlider" width="280" height="50"></svg>
+          <div class="slider-values">
+            <span id="magRangeMinVal">0.0</span>–<span id="magRangeMaxVal">10.0</span>
+          </div>
         </div>
 
         <div class="toggle-row">
-            <label class="checkbox">
-                <input type="checkbox" id="onlyTsunami">
-                Show Only Tsunami Events
-            </label>
+          <label class="checkbox">
+            <input type="checkbox" id="onlyTsunami">
+            Show Only Tsunami Events
+          </label>
         </div>
 
         <button id="btnClearFilters">Clear All Filters</button>
+      </div>
 
-        <div class="group">
-            <div class="group-title">Window</div>
-            <div class="radio-row">
-                <label class="radio"><input type="radio" name="window" value="month"> Monthly</label>
-                <label class="radio"><input type="radio" name="window" value="year" checked> Yearly</label>
-            </div>
+      <div class="group">
+        <div class="group-title">Window</div>
+        <div class="radio-row">
+          <label class="radio"><input type="radio" name="window" value="month"> Monthly</label>
+          <label class="radio"><input type="radio" name="window" value="year" checked> Yearly</label>
         </div>
-        <div class="group" id="legendPanel">
-            <div class="group-title">Legends</div>
-            <div id="colorLegend"></div>
-            <div id="sizeLegend"></div>
-            <div id="sigGradientLegend"></div>
-        </div>
-        
+      </div>
     </aside>
 
     <!-- MAP -->
     <main id="viz">
-        <svg id="map" role="img" aria-label="Earthquake map"></svg>
+      <svg id="map" role="img" aria-label="Earthquake map"></svg>
 
-        <div id="zoomControls" aria-label="Map zoom controls">
-            <div id="zoomStatus">1.0×</div>
-            <button id="zoomIn" title="Zoom in">+</button>
-            <button id="zoomOut" title="Zoom out">−</button>
-            <button id="zoomReset" title="Fit to World">⟳</button>
+      <div id="zoomControls" aria-label="Map zoom controls">
+        <div id="zoomStatus">1.0×</div>
+        <button id="zoomIn" title="Zoom in">+</button>
+        <button id="zoomOut" title="Zoom out">−</button>
+        <button id="zoomReset" title="Fit to World">⟳</button>
+      </div>
+
+      <div id="mapTimeline" role="group" aria-label="Timeline controls">
+        <div class="timeline-row">
+          <button id="btnPrev" title="Previous">&#9664;</button>
+          <input type="range" id="timeSlider" min="0" max="0" step="1" value="0" disabled>
+          <button id="btnNext" title="Next">&#9654;</button>
+          <button id="btnPlay" title="Play/Pause">Play</button>
+          <button id="btnShowAll" class="ghost" title="Show all">All</button>
         </div>
+        <div id="timeLabel">—</div>
 
-        <div id="mapTimeline" role="group" aria-label="Timeline controls">
-            <div class="timeline-row">
-                <button id="btnPrev" title="Previous">&#9664;</button>
-                <input type="range" id="timeSlider" min="0" max="0" step="1" value="0" disabled>
-                <button id="btnNext" title="Next">&#9654;</button>
-                <button id="btnPlay" title="Play/Pause">Play</button>
-                <button id="btnShowAll" class="ghost" title="Show all">All</button>
-            </div>
-            <div id="timeLabel">—</div>
-
-            <div class="map-buttons small">
-                <button id="btnWorld" class="primary">World</button>
-                <button id="btnNA" class="primary">North America</button>
-                <button id="btnIndonesia" class="primary">Indonesia</button>
-                <button id="btnJapan" class="primary">Japan</button>
-                <button id="btnAndes" class="primary">Andes</button>
-                <button id="btnNZ" class="primary">New Zealand</button>
-            </div>
-            
+        <div class="map-buttons small">
+          <button id="btnWorld" class="primary">World</button>
+          <button id="btnNA" class="primary">North America</button>
+          <button id="btnIndonesia" class="primary">Indonesia</button>
+          <button id="btnJapan" class="primary">Japan</button>
+          <button id="btnAndes" class="primary">Andes</button>
+          <button id="btnNZ" class="primary">New Zealand</button>
         </div>
+      </div>
 
-        <div id="tooltip" class="hidden" role="dialog" aria-live="polite"></div>
+      <div id="tooltip" class="hidden" role="dialog" aria-live="polite"></div>
     </main>
+  </div>
 
-</div>
-
-<script src="js/main.js" defer></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
