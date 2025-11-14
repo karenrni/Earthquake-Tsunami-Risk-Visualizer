@@ -979,29 +979,55 @@ function renderLegend() {
                 .attr('fill', '#9ca3af')
                 .text(d);
         });
+    
     })();
 
     (function addTsunamiRow() {
-        const w = 220, h = 58, cx = 42, cyR = 26, r = 15;
-
-        const c = sizeLegendDiv.append('div').style('margin', '8px 0 0 0');
-        c.append('div')
-            .style('margin-bottom', '6px')
-            .style('color', '#6b7280')
-            .style('font-size', '12px')
-            .style('text-align', 'left')
-            .text('Tsunami Occurred');
-
-        const svgL = c.append('svg').attr('width', w).attr('height', h);
-        svgL.append('circle')
-            .attr('cx', cx)
-            .attr('cy', cyR)
-            .attr('r', r)
-            .attr('fill', 'none')
-            .attr('stroke', COLORS.tsunami)
-            .attr('stroke-width', 1.5)
-            .attr('vector-effect', 'non-scaling-stroke');
-    })();
+      const w = 220, h = 58, cx = 42, cyR = 26, r = 15;
+  
+      const c = sizeLegendDiv.append('div').style('margin', '8px 0 0 0');
+      c.append('div')
+          .style('margin-bottom', '6px')
+          .style('color', '#6b7280')
+          .style('font-size', '12px')
+          .style('text-align', 'left')
+          .text('Tsunami Occurred');
+  
+      const svgL = c.append('svg').attr('width', w).attr('height', h);
+      svgL.append('circle')
+          .attr('cx', cx)
+          .attr('cy', cyR)
+          .attr('r', r)
+          .attr('fill', 'none')
+          .attr('stroke', COLORS.tsunami)
+          .attr('stroke-width', 1.5)
+          .attr('vector-effect', 'non-scaling-stroke');
+  })();
+  
+  // Add tectonic plate boundaries legend
+  (function addPlateBoundariesRow() {
+      const w = 220, h = 48, x1 = 20, x2 = 80, cy = 24;
+  
+      const c = sizeLegendDiv.append('div').style('margin', '8px 0 0 0');
+      c.append('div')
+          .style('margin-bottom', '6px')
+          .style('color', '#6b7280')
+          .style('font-size', '12px')
+          .style('text-align', 'left')
+          .text('Tectonic Plate Boundaries');
+  
+      const svgL = c.append('svg').attr('width', w).attr('height', h);
+      svgL.append('line')
+          .attr('x1', x1)
+          .attr('y1', cy)
+          .attr('x2', x2)
+          .attr('y2', cy)
+          .attr('stroke', '#6b7280')
+          .attr('stroke-width', 1.5)
+          .attr('stroke-opacity', 0.25)
+          .attr('vector-effect', 'non-scaling-stroke');
+  })();
+    
 }
 
 // ---------- Play loop (timeline) ----------
