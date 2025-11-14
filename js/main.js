@@ -620,46 +620,187 @@ function adjustCircleSizes() {
 function showTooltip(event, d) {
   const timeFmt = d3.timeFormat('%b %d, %Y %H:%M UTC');
 
-  const badges = [];
-  if (d.mag != null) badges.push(`<span class="badge">M ${(+d.mag).toFixed(1)}</span>`);
-  if (d.depth != null) badges.push(`<span class="badge">${(+d.depth).toFixed(0)} km</span>`);
-  if (d.tsunami === 1) badges.push('<span class="badge" style="border-color:#743; color:#fbbf24">Tsunami</span>');
+  // Helper for soft bubble badges
+  function badge(text, color, borderColor = '#000', textColor = '#111') {
+    return `
+      <div style="
+        display:inline-block;
+        padding:4px 7px;
+        margin:3px 0;
+        border-radius:6px;
+        background:${color};
+        border:1px solid ${borderColor};
+        color:${textColor};
+        font-size:12px;
+      ">
+        ${text}
+      </div>
+    `;
+  }
 
-  const sigRow = `<div><span class="badge" style="background:${COLORS.sig};border-color:#000;color:#fff">Overall Significance: ${d.sig==null?'—':(+d.sig).toFixed(0)}</span></div>`;
+  const lines = [];
 
-  // Nearest station mini scale: grows with zoom (so it lengthens as you zoom in)
-  const kmPerDeg = 111.32;
-  const dminKm = (d.dmin != null) ? (d.dmin * kmPerDeg) : null;
-  const pxBase = dminKm == null ? 0 : (dminKm / 1000) * 60; // base mapping
-  const pxLen = dminKm == null ? 0 : Math.max(24, Math.min(180, pxBase * Math.pow(zoomK, 0.45))); // grow with zoom
-  const scaleBar = (dminKm == null) ? '' : `
-    <div style="margin-top:6px;">
-      <div style="font-size:11px;color:var(--muted, #6b7280)">Nearest station: ${dminKm.toFixed(0)} km</div>
-      <svg width="${pxLen+16}" height="18" style="overflow:visible">
-        <line x1="4" y1="10" x2="${pxLen+12}" y2="10" stroke="#374151" stroke-width="2"/>
-        <line x1="4" y1="5" x2="4" y2="15" stroke="#374151" stroke-width="2"/>
-        <line x1="${pxLen+12}" y1="5" x2="${pxLen+12}" y2="15" stroke="#374151" stroke-width="2"/>
-      </svg>
-    </div>`;
+  // --- TIME ONLY (no title) ---
+  lines.push(`
+    <div style="font-size:12px; color:#666; margin-bottom:4px;">
+      ${d.time ? timeFmt(d.time) : ''}
+    </div>
+  `);
 
-  const bottom = `<div class="meta">Magnitude (Richter Scale): ${fmtNA(d.mag,1)} | CDI (Felt Intensity): ${fmtNA(d.cdi,1)} | MMI (Structural Intensity): ${fmtNA(d.mmi,1)}</div>`;
+  // ---------- ORDER YOU REQUESTED ----------
 
-  tip.classed('hidden', false).html(
-    `<h3>${d.place || 'Earthquake'}</h3>` +
-    `<div class="meta">${d.time ? timeFmt(d.time) : ''}</div>` +
-    sigRow +
-    `<div style="margin-top:4px;">${badges.join(' ')}</div>` +
-    scaleBar +
-    bottom
-  );
+  // 1) OVERALL SIGNIFICANCE
+  if (d.sig != null) {
+    lines.push(badge(
+      `Overall Significance: ${d.sig}`,
+      COLORS.sig + '33',
+      COLORS.sig,
+      '#000'
+    ));
+  }
 
+  // 2) MAGNITUDE / CDI / MMI
+  if (d.mag != null) {
+    lines.push(badge(
+      `Magnitude: ${d.mag.toFixed(1)}`,
+      COLORS.mag + '33',
+      COLORS.mag
+    ));
+  }
+
+  if (d.cdi != null) {
+    lines.push(badge(
+      `CDI: ${d.cdi.toFixed(1)}`,
+      COLORS.cdi + '33',
+      COLORS.cdi
+    ));
+  }
+
+  if (d.mmi != null) {
+    lines.push(badge(
+      `MMI: ${d.mmi.toFixed(1)}`,
+      COLORS.mmi + '33',
+      COLORS.mmi
+    ));
+  }
+
+  // 3) TSUNAMI
+  if (d.tsunami === 1) {
+    lines.push(badge(
+      'Tsunami',
+      COLORS.tsunami + '33',
+      COLORS.tsunami
+    ));
+  }
+
+  // 4) DEPTH
+  if (d.depth != null) {
+    lines.push(badge(
+      `Depth: ${d.depth.toFixed(0)} km`,
+      '#e5e7eb',
+      '#6b7280'
+    ));
+  }
+
+  // 5) NEAREST STATION (spatial scaling)
+  if (d.dmin != null && Number.isFinite(d.dmin) &&
+      Number.isFinite(d.longitude) && Number.isFinite(d.latitude)) {
+
+    const proj = currentBasemap && currentBasemap.projection;
+    const kmPerDeg = 111.32;
+    const dminDeg = d.dmin;
+    const dminKm  = dminDeg * kmPerDeg;
+
+    // --- Compute local px/deg using actual projection at that lat/lon ---
+    let pxPerDeg = 0;
+    if (proj) {
+      const lon = d.longitude;
+      const lat = d.latitude;
+      const delta = 0.03;  // small step
+      const p0 = proj([lon, lat]);
+      const p1 = proj([lon + delta, lat]);
+
+      if (p0 && p1) {
+        const dist = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+        pxPerDeg = (dist / delta) * zoomK;
+      }
+    }
+
+    if (!pxPerDeg || !Number.isFinite(pxPerDeg)) {
+      pxPerDeg = 5 * zoomK;
+    }
+
+    // Raw length
+    let pxLenRaw = dminDeg * pxPerDeg;
+
+    // Apply a shrink so the bar resembles real spatial size but fits the tooltip
+    const shrink = 0.22;            // changed from 0.40 → more realistic sizes
+    let pxLen = pxLenRaw * shrink;
+
+    // Clamp extremely long distances in the tooltip
+    const MAX_LEN = 180;            // smaller than before → no more Taiwan island problem
+    pxLen = Math.max(0, Math.min(pxLen, MAX_LEN));
+
+    // New small minimum bar so the jump from tick → bar is smooth
+    const MIN_LEN = 3;              // was 24 → now 3 px → nearly seamless
+    const showTickOnly = (dminKm <= 0.5 || pxLen < MIN_LEN);
+
+    let scaleSvg;
+    if (showTickOnly) {
+      scaleSvg = `
+        <svg width="20" height="18" style="display:block; margin-top:4px;">
+          <line x1="10" y1="5" x2="10" y2="15"
+            stroke="#374151" stroke-width="2"/>
+        </svg>
+      `;
+    } else {
+      scaleSvg = `
+        <svg width="${pxLen + 18}" height="18" style="display:block; margin-top:4px;">
+          <line x1="4"  y1="10" x2="${pxLen + 12}" y2="10"
+            stroke="#374151" stroke-width="2"/>
+          <line x1="4"        y1="5"  x2="4"         y2="15"
+            stroke="#374151" stroke-width="2"/>
+          <line x1="${pxLen + 12}" y1="5" x2="${pxLen + 12}" y2="15"
+            stroke="#374151" stroke-width="2"/>
+        </svg>
+      `;
+    }
+
+    // Badge that contains the text + the bar
+    lines.push(`
+      <div style="margin:2px 0;">
+        <div style="
+          display:inline-block;
+          padding:4px 7px 6px 7px;
+          border-radius:6px;
+          background:#f1f5f9;
+          border:1px solid #94a3b8;
+          color:#111827;
+          font-size:12px;
+        ">
+          Nearest station: ${dminKm.toFixed(0)} km
+          ${scaleSvg}
+        </div>
+      </div>
+    `);
+  }
+
+  // --- Render tooltip ---
+  tip.classed('hidden', false).html(lines.join(''));
   positionTooltip(event);
 }
-function hideTooltip() { tip.classed('hidden', true); }
+
+
+
 function positionTooltip(event) {
   const xy = d3.pointer(event, svg.node());
-  tip.style('left', xy[0] + 'px').style('top', xy[1] + 'px');
+  tip.style('left', (xy[0] + 12) + 'px')   // slight right so cursor doesn't cover it
+     .style('top',  (xy[1] - 40) + 'px');  // only 20px above → ideal
 }
+
+function hideTooltip() { tip.classed('hidden', true); }
+
+
 function fmtNA(v, p=1) { return (v == null || Number.isNaN(v)) ? '—' : (+v).toFixed(p); }
 
 // ---------- Legend (inside sidebar, above Filters) ----------

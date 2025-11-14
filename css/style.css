@@ -232,4 +232,12 @@ main#viz { position:relative; min-height:70vh; background:#0a1128; } /* dark nav
   gap:8px;                 /* swatch ↔ label gap */
 }
 
+#tooltip {
+  line-height: 1.28;
+}
+#tooltip .badge {
+  margin: 2px 0;
+  display: inline-block;
+}
+
 
