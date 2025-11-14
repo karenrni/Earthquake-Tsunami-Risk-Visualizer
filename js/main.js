@@ -911,16 +911,16 @@ function renderLegend() {
         let ticks;
         if (k === 'mag') {
             const [lo, hi] = scale.domain();
-            // integers like 4,5,6,7
+            // integers
             ticks = d3.ticks(Math.floor(lo), Math.ceil(hi), 4);
         } else {
             const [lo, hi] = scale.domain();
-            // rounded significance/CDI/MMI values (e.g., 0, 1000, 2000, 3000)
+            // rounded significance/CDI/MMI values
             ticks = d3.ticks(lo, hi, 4);
         }
 
         const rowLeft = 35;
-        const spacingX = 68;
+        const spacingX = 53;
         const cy = 36;
         const valueY = 82;
 
