@@ -32,6 +32,10 @@ const INDONESIA_INIT = { type: 'indo', projection: d3.geoMercator().center([120,
 const JAPAN_INIT = { type: 'japan', projection: d3.geoMercator().center([138, 38]).scale(2000) };
 const ANDES_INIT = { type: 'andes', projection: d3.geoMercator().center([-72, -23]).scale(1650) };
 const NZ_INIT = { type: 'nz', projection: d3.geoMercator().center([172, -41]).scale(2700) };
+const CARIBBEAN_INIT = { 
+  type: 'caribbean', 
+  projection: d3.geoMercator().center([-75, 18]).scale(1500) 
+};
 
 // ---------- App state ----------
 let currentBasemap = WORLD_INIT;
@@ -66,6 +70,7 @@ const btnIndonesia = document.getElementById('btnIndonesia');
 const btnJapan = document.getElementById('btnJapan');
 const btnAndes = document.getElementById('btnAndes');
 const btnNZ = document.getElementById('btnNZ');
+const btnCaribbean = document.getElementById('btnCaribbean');
 
 const zoomInBtn = document.getElementById('zoomIn');
 const zoomOutBtn = document.getElementById('zoomOut');
@@ -282,6 +287,8 @@ if (btnIndonesia) btnIndonesia.addEventListener('click', () => { loadBasemap(IND
 if (btnJapan) btnJapan.addEventListener('click', () => { loadBasemap(JAPAN_INIT); resetZoom(); drawAll(); });
 if (btnAndes) btnAndes.addEventListener('click', () => { loadBasemap(ANDES_INIT); resetZoom(); drawAll(); });
 if (btnNZ) btnNZ.addEventListener('click', () => { loadBasemap(NZ_INIT); resetZoom(); drawAll(); });
+if (btnCaribbean) btnCaribbean.addEventListener('click',  ()=> { loadBasemap(CARIBBEAN_INIT); resetZoom(); drawAll(); });
+
 
 // Timeline controls
 btnPrev.addEventListener('click', () => { if (timeIndex > 0) { setTimeSlider(timeIndex - 1); applyFiltersAndRender(); } });
@@ -308,10 +315,10 @@ Promise.all([
 
     WORLD_INIT.feature = toGeo(world);
     NA_INIT.feature = toGeo(na);
-    [INDONESIA_INIT, JAPAN_INIT, ANDES_INIT, NZ_INIT].forEach(r => r.feature = WORLD_INIT.feature);
+    [INDONESIA_INIT, JAPAN_INIT, ANDES_INIT, NZ_INIT, CARIBBEAN_INIT].forEach(r => r.feature = WORLD_INIT.feature);
 
     if (plates && plates.features) {
-        [WORLD_INIT, NA_INIT, INDONESIA_INIT, JAPAN_INIT, ANDES_INIT, NZ_INIT].forEach(r => r.plates = plates);
+        [WORLD_INIT, NA_INIT, INDONESIA_INIT, JAPAN_INIT, ANDES_INIT, NZ_INIT, CARIBBEAN_INIT].forEach(r => r.plates = plates);
     }
 
     loadBasemap(WORLD_INIT);
