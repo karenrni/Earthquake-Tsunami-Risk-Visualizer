@@ -533,65 +533,135 @@ function drawQuakes() {
     const proj = currentBasemap.projection;
     const useOverall = (document.querySelector('input[name="sizeMode"]:checked')?.value === 'overall');
 
+    // Join quake groups
     const rows = gQuake.selectAll('g.quake')
-        .data(filtered, (d, i) => `${(d.time && d.time.getTime) ? d.time.getTime() : i}:${d.latitude},${d.longitude}`);
+        .data(filtered, (d, i) => `${d.time ? d.time.getTime() : i}:${d.latitude},${d.longitude}`);
 
+    // Remove old rows
     rows.exit()
         .select('g.rings')
-        .transition()
-        .duration(400)
+        .transition().duration(300)
         .style('opacity', 0)
         .on('end', function() { d3.select(this.parentNode).remove(); });
 
-    const rowsEnter = rows.enter().append('g')
+    // Enter rows
+    const rowsEnter = rows.enter()
+        .append('g')
         .attr('class', 'quake')
-        .attr('transform', d => `translate(${proj([d.longitude, d.latitude])[0]},${proj([d.longitude, d.latitude])[1]})`);
+        .attr('transform', d => {
+            const pt = proj([d.longitude, d.latitude]);
+            return `translate(${pt[0]},${pt[1]})`;
+        });
+
     rowsEnter.append('g').attr('class', 'rings');
 
+    // UPDATE + ENTER
     const rowsAll = rowsEnter.merge(rows);
+
     rowsAll.attr('transform', d => {
         const pt = proj([d.longitude, d.latitude]);
         return `translate(${pt[0]},${pt[1]})`;
     });
 
+    // -------------------------------------------------------------
+    // Updated ringSpec generator — only one source of rings
+    // -------------------------------------------------------------
     rowsAll.each(function(d) {
         const container = d3.select(this).select('g.rings');
+
+        const DEPTH_OFFSET = 1.5;
+        const TSU_OFFSET   = 3.5;
+        const DEPTH_EXTRA  = 0.25;
+        const TSU_EXTRA    = 0.25;
+        const TSU_COLOR    = '#1e40af';
 
         function ringSpec(d, useOverall) {
             if (useOverall) {
                 const rSig = sizeScale_sig(d.sig ?? 0);
+
                 const specs = [
-                    {key:'sig',     r:rSig,        fill:COLORS.sig,  fo:0.75, stroke:'#000', so:0.35, sw:0},
-                    {key:'depth',   r:rSig+1.5,    fill:'none',      fo:1,    stroke:COLORS.depthRing, so:0.9, sw:depthStroke(d.depth ?? 0)},
+                    { key:'sig', r:rSig, fill:COLORS.sig, fo:0.75, stroke:'#000', so:0.35, sw:0 },
+                    {
+                        key:'depth',
+                        r:rSig + DEPTH_OFFSET,
+                        fill:'none',
+                        fo:1,
+                        stroke:COLORS.depthRing,
+                        so:0.9,
+                        sw:depthStroke(d.depth ?? 0) + DEPTH_EXTRA
+                    }
                 ];
-                if (d.tsunami === 1) specs.push({key:'tsunami', r:rSig+3, fill:'none', fo:1, stroke:COLORS.tsunami, so:0.9, sw:1.5});
-                return specs;
-            } else {
-                const showMag = chkMag.checked, showCDI = chkCDI.checked, showMMI = chkMMI.checked;
-                let rMag = showMag ? sizeScale_mag(d.mag ?? 0) : 0;
-                let rCDI = showCDI ? sizeScale_cdi(d.cdi ?? 0) : 0;
-                let rMMI = showMMI ? sizeScale_mmi(d.mmi ?? 0) : 0;
-                if (!showMag && !showCDI && !showMMI) rMag = sizeScale_mag(d.mag ?? 0);
 
-                let rBase = Math.max(rMag || 0, rCDI || 0, rMMI || 0) || sizeScale_mag(d.mag ?? 0);
+                if (d.tsunami === 1) {
+                    specs.push({
+                        key:'tsunami',
+                        r:rSig + TSU_OFFSET,
+                        fill:'none',
+                        fo:1,
+                        stroke:TSU_COLOR,
+                        so:0.9,
+                        sw:1.5 + TSU_EXTRA
+                    });
+                }
 
-                const specs = [];
-                if (rMag) specs.push({key:'mag', r:rMag, fill:COLORS.mag, fo:0.55, stroke:'#000', so:0.25, sw:0});
-                if (rCDI) specs.push({key:'cdi', r:rCDI, fill:COLORS.cdi, fo:0.45, stroke:'#000', so:0.25, sw:0});
-                if (rMMI) specs.push({key:'mmi', r:rMMI, fill:COLORS.mmi, fo:0.35, stroke:'#000', so:0.25, sw:0});
-
-                specs.push({key:'depth', r:rBase+1.5, fill:'none', fo:1, stroke:COLORS.depthRing, so:0.9, sw:depthStroke(d.depth ?? 0)});
-                if (d.tsunami === 1) specs.push({key:'tsunami', r:rBase+3, fill:'none', fo:1, stroke:COLORS.tsunami, so:0.9, sw:1.5});
                 return specs;
             }
+
+            // --- Combo mode ---
+            const showMag = chkMag.checked;
+            const showCDI = chkCDI.checked;
+            const showMMI = chkMMI.checked;
+
+            let rMag = showMag ? sizeScale_mag(d.mag ?? 0) : 0;
+            let rCDI = showCDI ? sizeScale_cdi(d.cdi ?? 0) : 0;
+            let rMMI = showMMI ? sizeScale_mmi(d.mmi ?? 0) : 0;
+
+            if (!showMag && !showCDI && !showMMI) {
+                rMag = sizeScale_mag(d.mag ?? 0);
+            }
+
+            const rBase = Math.max(rMag, rCDI, rMMI, sizeScale_mag(d.mag ?? 0));
+
+            const specs = [];
+            if (rMag) specs.push({ key:'mag', r:rMag, fill:COLORS.mag, fo:0.55, stroke:'#000', so:0.25, sw:0 });
+            if (rCDI) specs.push({ key:'cdi', r:rCDI, fill:COLORS.cdi, fo:0.45, stroke:'#000', so:0.25, sw:0 });
+            if (rMMI) specs.push({ key:'mmi', r:rMMI, fill:COLORS.mmi, fo:0.35, stroke:'#000', so:0.25, sw:0 });
+
+            // depth ring
+            specs.push({
+                key:'depth',
+                r:rBase + DEPTH_OFFSET,
+                fill:'none',
+                fo:1,
+                stroke:COLORS.depthRing,
+                so:0.9,
+                sw:depthStroke(d.depth ?? 0) + DEPTH_EXTRA
+            });
+
+            // tsunami ring
+            if (d.tsunami === 1) {
+                specs.push({
+                    key:'tsunami',
+                    r:rBase + TSU_OFFSET,
+                    fill:'none',
+                    fo:1,
+                    stroke:TSU_COLOR,
+                    so:0.9,
+                    sw:1.5 + TSU_EXTRA
+                });
+            }
+
+            return specs;
         }
 
+        // Get specs
         const specs = ringSpec(d, useOverall);
 
-// keyed join on ring type; only add/remove the minimal set
+        // JOIN
         const rings = container.selectAll('circle.ring')
             .data(specs, s => s.key);
 
+        // ENTER
         rings.enter()
             .append('circle')
             .attr('class', s => 'ring ' + s.key)
@@ -601,86 +671,66 @@ function drawQuakes() {
             .attr('fill-opacity', s => s.fo)
             .attr('stroke', s => s.stroke)
             .attr('stroke-opacity', s => s.so)
+            .attr('stroke-width', s => s.sw)
             .attr('vector-effect', s => s.sw > 0 ? 'non-scaling-stroke' : null)
-            .attr('stroke-width', s => s.sw || null)
-            .transition().duration(400)
-            .attr('r', s => s.r)
-            .selection();
-
-        rings.transition().duration(400)
-            .attr('data-r', s => s.r)
-            .attr('fill', s => s.fill)
-            .attr('fill-opacity', s => s.fo)
-            .attr('stroke', s => s.stroke)
-            .attr('stroke-opacity', s => s.so)
-            .attr('stroke-width', s => s.sw || null)
+            .transition().duration(350)
             .attr('r', s => s.r);
 
+        // UPDATE
+        rings.transition().duration(350)
+            .attr('data-r', s => s.r)
+            .attr('r', s => s.r)
+            .attr('fill-opacity', s => s.fo)
+            .attr('stroke', s => s.stroke)
+            .attr('stroke-width', s => s.sw);
+
+        // EXIT
         rings.exit()
-            .transition().duration(350)
+            .transition().duration(250)
             .attr('r', 0)
             .style('opacity', 0)
             .remove();
-
-
-        function addRing(cls, r, fill, fillOpacity, stroke, strokeOpacity, strokeWidth = 0) {
-            const c = container.append('circle').attr('class', 'ring ' + cls)
-                .attr('data-r', r)
-                .attr('r', r)
-                .attr('fill', fill)
-                .attr('fill-opacity', fillOpacity)
-                .attr('stroke', stroke)
-                .attr('stroke-opacity', strokeOpacity);
-            if (strokeWidth > 0) {
-                c.attr('stroke-width', strokeWidth).attr('vector-effect', 'non-scaling-stroke');
-            }
-            return c;
-        }
-
-        if (useOverall) {
-            const rSig = sizeScale_sig(d.sig ?? 0);
-            addRing('sig', rSig, COLORS.sig, 0.75, '#000', 0.35);
-
-            // Depth ring
-            const depthW = depthStroke(d.depth ?? 0);
-            addRing('depth', rSig + 1.5, 'none', 1, COLORS.depthRing, 0.9, depthW);
-
-            // Tsunami ring
-            if (d.tsunami === 1)
-                addRing('tsunami', rSig + 3, 'none', 1, COLORS.tsunami, 0.9, 1.5);
-
-        } else {
-            const showMag = chkMag.checked, showCDI = chkCDI.checked, showMMI = chkMMI.checked;
-            let rMag = 0, rCDI = 0, rMMI = 0;
-
-            if (showMag) { rMag = sizeScale_mag(d.mag ?? 0); addRing('mag', rMag, COLORS.mag, 0.55, '#000', 0.25); }
-            if (showCDI) { rCDI = sizeScale_cdi(d.cdi ?? 0); addRing('cdi', rCDI, COLORS.cdi, 0.45, '#000', 0.25); }
-            if (showMMI) { rMMI = sizeScale_mmi(d.mmi ?? 0); addRing('mmi', rMMI, COLORS.mmi, 0.35, '#000', 0.25); }
-
-            if (!showMag && !showCDI && !showMMI) {
-                rMag = sizeScale_mag(d.mag ?? 0);
-                addRing('mag fallback', rMag, COLORS.mag, 0.55, '#000', 0.25);
-            }
-
-            let rBase = Math.max(rMag || 0, rCDI || 0, rMMI || 0);
-            if (rBase === 0) rBase = sizeScale_mag(d.mag ?? 0);
-
-            const depthW = depthStroke(d.depth ?? 0);
-            addRing('depth', rBase + 1.5, 'none', 1, COLORS.depthRing, 0.9, depthW);
-
-            if (d.tsunami === 1)
-                addRing('tsunami', rBase + 3, 'none', 1, COLORS.tsunami, 0.9, 1.5);
-        }
     });
 
-    // Tooltips
+    // Hover + click
     rowsAll
         .on('mouseover', (event, d) => showTooltip(event, d))
-        .on('mousemove', (event) => positionTooltip(event))
-        .on('mouseout', hideTooltip);
+        .on('mousemove', positionTooltip)
+        .on('mouseout', hideTooltip)
+        .on('click', function(event, d) {
+            if (selectedQuake === this) {
+                selectedQuake = null;
+                gQuake.selectAll('g.quake').style('opacity', 1);
+            } else {
+                selectedQuake = this;
+                gQuake.selectAll('g.quake').style('opacity', q => q === d ? 1 : 0.5);
+            }
+        });
+    
+    let selectedQuake = null;
 
-    // Fade-in on enter
-    rowsEnter.select('g.rings').attr('opacity', 0).transition().duration(550).attr('opacity', 1);
+    rowsAll
+        .style('cursor','pointer')
+        .on('click', function(event, d) {
+            if (selectedQuake === d) {
+                // unselect
+                selectedQuake = null;
+                gQuake.selectAll('g.quake').transition().duration(250).style('opacity', 1);
+                return;
+            }
+
+            selectedQuake = d;
+            gQuake.selectAll('g.quake')
+                .transition().duration(250)
+                .style('opacity', q => q === d ? 1 : 0.2);
+        });
+
+
+    // Fade-in enter
+    rowsEnter.select('g.rings')
+        .attr('opacity', 0)
+        .transition().duration(400)
+        .attr('opacity', 1);
 
     adjustCircleSizes();
 }
@@ -1089,364 +1139,458 @@ function showIntroOverlay() {
     });
 }
 
-// ---------- Story mode ----------
-let storyPaused = false;
+// ---------- Story mode (full replacement) ----------
+
+// Global story state
 let storyRunning = false;
+let storyPaused = false;
+let storyEndRequested = false;
+let storyJumpRequested = false;
+let storyStepIndex = 0;
+
+// Predefined major events
+const STORY_STEPS = [
+  {
+    year: 2001,
+    title: '2001 Gujarat, India (Mw 7.7)',
+    lon: 70.326, lat: 23.388, k: 6.5,
+    html: `<b>Gujarat (Bhuj)</b>: at least ~20,000 deaths; widespread collapse across Kutch and beyond. Source: U.S. Geological Survey (USGS).`,
+  },
+  {
+    year: 2004,
+    title: '2004 Sumatra–Andaman (Mw 9.1)',
+    lon: 95.85, lat: 3.32, k: 5.8,
+    html: `<b>Indian Ocean tsunami</b>: one of the deadliest disasters on record; waves &gt;30 m; ~230k fatalities. Source: USGS.`,
+  },
+  {
+    year: 2008,
+    title: '2008 Wenchuan (Sichuan), China (Mw 7.9)',
+    lon: 103.4, lat: 31.0, k: 6.6,
+    html: `<b>Wenchuan quake</b>: ~87,000 dead or missing; massive landslides and school collapses. Source: USGS.`,
+  },
+  {
+    year: 2010,
+    title: '2010 Haiti (Mw 7.0)',
+    lon: -72.533, lat: 18.457, k: 7.2,
+    html: `<b>Port-au-Prince area</b>: catastrophic damage; death toll in the hundreds of thousands. Source: USGS.`,
+  },
+  {
+    year: 2011,
+    title: '2011 Tōhoku, Japan (Mw 9.1)',
+    lon: 142.372, lat: 38.297, k: 6.2,
+    html: `<b>Great East Japan Earthquake & Tsunami</b>: ~20k dead/missing; Fukushima crisis. Source: USGS.`,
+  },
+  {
+    year: 2015,
+    title: '2015 Gorkha, Nepal (Mw 7.8)',
+    lon: 84.73, lat: 28.23, k: 6.8,
+    html: `<b>Kathmandu Valley</b>: widespread destruction; ~10k fatalities. Source: USGS.`,
+  },
+  {
+    year: 2018,
+    title: '2018 Sulawesi (Palu), Indonesia (Mw 7.5)',
+    lon: 119.84, lat: -0.178, k: 7.0,
+    html: `<b>Palu Bay</b>: destructive tsunami and extensive liquefaction; thousands killed. Source: NOAA/USGS.`,
+  },
+];
+
+// ---------- Story UI ----------
 
 function addPlayStoryButton() {
-    const container = document.querySelector('main#viz');
-    if (!container) return;
+  const container = document.querySelector('main#viz');
+  if (!container) return;
 
-    // Large, "cool" Play Story button pinned at the TOP CENTER
-    const btn = document.createElement('button');
-    btn.id = 'btnPlayStory';
-    btn.textContent = '▶ Play Story - Major Earthquakes';
-    Object.assign(btn.style, {
-        position: 'absolute',
-        top: '12px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 12,
-        padding: '14px 22px',
-        borderRadius: '999px',
-        border: '1px solid #c7d2fe',
-        background: 'linear-gradient(90deg, #e0e7ff, #f5d0fe)',
-        color: '#111827',
-        fontWeight: 800,
-        fontSize: '16px',
-        letterSpacing: '.2px',
-        cursor: 'pointer',
-        boxShadow: '0 10px 24px rgba(59,130,246,0.18), inset 0 0 8px rgba(255,255,255,0.6)',
-        textShadow: '0 1px 0 rgba(255,255,255,0.6)'
-    });
-    btn.addEventListener('mouseenter', () => { btn.style.boxShadow = '0 14px 30px rgba(59,130,246,0.25), inset 0 0 10px rgba(255,255,255,0.7)'; });
-    btn.addEventListener('mouseleave', () => { btn.style.boxShadow = '0 10px 24px rgba(59,130,246,0.18), inset 0 0 8px rgba(255,255,255,0.6)'; });
-    btn.addEventListener('click', () => {
-        if (storyRunning) {
-            // If running, toggle pause
-            storyPaused = !storyPaused;
-            updateStoryPauseButton();
-        } else {
-            playStory();
-        }
-    });
-    container.appendChild(btn);
+  // Big top-center "Play Story" button
+  const btn = document.createElement('button');
+  btn.id = 'btnPlayStory';
+  btn.textContent = '▶ Play Story - Major Earthquakes';
+  Object.assign(btn.style, {
+    position: 'absolute',
+    top: '12px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 12,
+    padding: '14px 22px',
+    borderRadius: '999px',
+    border: '1px solid #c7d2fe',
+    background: 'linear-gradient(90deg, #e0e7ff, #f5d0fe)',
+    color: '#111827',
+    fontWeight: 800,
+    fontSize: '16px',
+    letterSpacing: '.2px',
+    cursor: 'pointer',
+    boxShadow: '0 10px 24px rgba(59,130,246,0.18), inset 0 0 8px rgba(255,255,255,0.6)',
+    textShadow: '0 1px 0 rgba(255,255,255,0.6)'
+  });
+  btn.addEventListener('mouseenter', () => {
+    btn.style.boxShadow = '0 14px 30px rgba(59,130,246,0.25), inset 0 0 10px rgba(255,255,255,0.7)';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.boxShadow = '0 10px 24px rgba(59,130,246,0.18), inset 0 0 8px rgba(255,255,255,0.6)';
+  });
+  btn.addEventListener('click', () => {
+    if (!storyRunning) {
+      playStory();
+    } else {
+      // toggle pause when already running
+      storyPaused = !storyPaused;
+      updateStoryButtons();
+    }
+  });
+  container.appendChild(btn);
 
-    // Story note container (TOP, large and readable)
-    const note = document.createElement('div');
-    note.id = 'storyNote';
-    Object.assign(note.style, {
-        position: 'absolute',
-        left: '50%',
-        top: '64px',
-        transform: 'translateX(-50%)',
-        maxWidth: '900px',
-        padding: '16px 18px',
-        borderRadius: '14px',
-        border: '1px solid #cbd5e1',
-        background: 'rgba(255,255,255,0.98)',
-        color: '#0f172a',
-        fontSize: '16px',
-        lineHeight: 1.45,
-        boxShadow: '0 12px 26px rgba(0,0,0,0.12)',
-        zIndex: 11,
-        display: 'none'
-    });
+  // Story note container (top, with Pause / Next / End / progress bar)
+  const note = document.createElement('div');
+  note.id = 'storyNote';
+  Object.assign(note.style, {
+    position: 'absolute',
+    left: '50%',
+    top: '64px',
+    transform: 'translateX(-50%)',
+    maxWidth: '900px',
+    padding: '16px 18px',
+    borderRadius: '14px',
+    border: '1px solid #cbd5e1',
+    background: 'rgba(255,255,255,0.98)',
+    color: '#0f172a',
+    fontSize: '16px',
+    lineHeight: 1.45,
+    boxShadow: '0 12px 26px rgba(0,0,0,0.12)',
+    zIndex: 11,
+    display: 'none'
+  });
 
-    // Title + controls + progress bar inside the note
-    note.innerHTML = `
+  note.innerHTML = `
     <div id="storyTitle" style="font-weight:800; font-size:18px; margin-bottom:6px;"></div>
     <div id="storyText" style="margin-bottom:10px;"></div>
-    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
       <button id="storyPauseBtn" style="
-        padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer; font-weight:700;
+        padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1;
+        background:#f8fafc; cursor:pointer; font-weight:700;
       ">Pause</button>
-      <div style="flex:1; height:10px; background:#e5e7eb; border-radius:999px; overflow:hidden; border:1px solid #cbd5e1;">
+      <button id="storyNextBtn" style="
+        padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1;
+        background:#eef2ff; cursor:pointer; font-weight:700;
+      ">Next earthquake</button>
+      <button id="storyEndBtn" style="
+        padding:6px 10px; border-radius:8px; border:1px solid #fecaca;
+        background:#fee2e2; cursor:pointer; font-weight:700; color:#991b1b;
+      ">End story</button>
+      <div style="flex:1; min-width:140px; height:10px; background:#e5e7eb; border-radius:999px; overflow:hidden; border:1px solid #cbd5e1;">
         <div id="storyProgress" style="height:100%; width:0%; background:linear-gradient(90deg,#3b82f6,#a855f7)"></div>
       </div>
     </div>
   `;
-    container.appendChild(note);
+  container.appendChild(note);
 
-    // Hook up pause button
-    note.querySelector('#storyPauseBtn').addEventListener('click', () => {
-        storyPaused = !storyPaused;
-        updateStoryPauseButton();
-    });
+  // Wire up the small buttons
+  const pauseBtn = note.querySelector('#storyPauseBtn');
+  const nextBtn  = note.querySelector('#storyNextBtn');
+  const endBtn   = note.querySelector('#storyEndBtn');
+
+  pauseBtn.addEventListener('click', () => {
+    if (!storyRunning) return;
+    storyPaused = !storyPaused;
+    updateStoryButtons();
+  });
+
+  nextBtn.addEventListener('click', () => {
+    if (!storyRunning) return;
+    // ask the current step to finish early and advance to the next one
+    storyJumpRequested = true;
+  });
+
+  endBtn.addEventListener('click', () => {
+    if (!storyRunning) return;
+    // request a hard stop; playStory will see this and fully exit
+    storyEndRequested = true;
+  });
+
+  updateStoryButtons();
 }
 
-function updateStoryPauseButton() {
-    const btn = document.getElementById('storyPauseBtn');
-    if (btn) btn.textContent = storyPaused ? 'Resume' : 'Pause';
-    const bigBtn = document.getElementById('btnPlayStory');
-    if (bigBtn) bigBtn.textContent = storyPaused ? '⏸ Story Paused - Click to Resume' : (storyRunning ? '⏯ Story Playing - Click to Pause' : '▶ Play Story');
+function updateStoryButtons() {
+  const bigBtn   = document.getElementById('btnPlayStory');
+  const pauseBtn = document.getElementById('storyPauseBtn');
+  const nextBtn  = document.getElementById('storyNextBtn');
+  const endBtn   = document.getElementById('storyEndBtn');
+
+  if (bigBtn) {
+    if (!storyRunning) {
+      bigBtn.textContent = '▶ Play Story - Major Earthquakes';
+    } else if (storyPaused) {
+      bigBtn.textContent = '⏸ Story Paused - Click to Resume';
+    } else {
+      bigBtn.textContent = '⏯ Story Playing - Click to Pause';
+    }
+  }
+
+  if (pauseBtn) {
+    pauseBtn.textContent = storyPaused ? 'Resume' : 'Pause';
+    pauseBtn.disabled = !storyRunning;
+  }
+  if (nextBtn) {
+    nextBtn.disabled = !storyRunning;
+  }
+  if (endBtn) {
+    endBtn.disabled = !storyRunning;
+  }
 }
 
 function showStoryNote(title, html) {
-    const note = document.getElementById('storyNote');
-    if (!note) return;
-    const titleDiv = note.querySelector('#storyTitle');
-    const textDiv  = note.querySelector('#storyText');
-    if (titleDiv) titleDiv.textContent = title || '';
-    if (textDiv)  textDiv.innerHTML = html || '';
-    note.style.display = 'block';
-    note.style.opacity = '0';
-    note.style.transition = 'opacity .25s ease';
-    requestAnimationFrame(() => { note.style.opacity = '1'; });
+  const note = document.getElementById('storyNote');
+  if (!note) return;
+  const titleDiv = note.querySelector('#storyTitle');
+  const textDiv  = note.querySelector('#storyText');
+  if (titleDiv) titleDiv.textContent = title || '';
+  if (textDiv)  textDiv.innerHTML = html || '';
+  note.style.display = 'block';
+  note.style.opacity = '0';
+  note.style.transition = 'opacity .25s ease';
+  requestAnimationFrame(() => { note.style.opacity = '1'; });
 }
 function hideStoryNote() {
-    const note = document.getElementById('storyNote');
-    if (!note) return;
-    note.style.transition = 'opacity .25s ease';
-    note.style.opacity = '0';
-    setTimeout(() => { note.style.display = 'none'; }, 250);
+  const note = document.getElementById('storyNote');
+  if (!note) return;
+  note.style.transition = 'opacity .25s ease';
+  note.style.opacity = '0';
+  setTimeout(() => { note.style.display = 'none'; }, 250);
 }
 
 function setProgress(pct) {
-    const bar = document.getElementById('storyProgress');
-    if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  const bar = document.getElementById('storyProgress');
+  if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + '%';
 }
 
-// ------ Story highlight helpers ------
+// ---------- Story helpers ----------
+
+function clearStoryHighlight() {
+  gStory.selectAll('*').interrupt().remove();
+}
 
 // Find the nearest recorded quake to a lon/lat, preferring the same year if available.
 function findNearestQuake(lon, lat, year) {
-    const dist2 = (aLon, aLat, bLon, bLat) => {
-        const dx = (aLon - bLon);
-        const dy = (aLat - bLat);
-        return dx*dx + dy*dy;
-    };
-    let pool = quakes;
-    if (year != null) {
-        const byYear = quakes.filter(q => q.year === year);
-        if (byYear.length) pool = byYear;
-    }
-    let best = null, bestD = Infinity;
-    for (let i = 0; i < pool.length; i++) {
-        const q = pool[i];
-        const d = dist2(lon, lat, q.longitude, q.latitude);
-        if (d < bestD) { bestD = d; best = q; }
-    }
-    return best;
+  const dist2 = (aLon, aLat, bLon, bLat) => {
+    const dx = (aLon - bLon);
+    const dy = (aLat - bLat);
+    return dx*dx + dy*dy;
+  };
+  let pool = quakes;
+  if (year != null) {
+    const byYear = quakes.filter(q => q.year === year);
+    if (byYear.length) pool = byYear;
+  }
+  let best = null, bestD = Infinity;
+  for (let i = 0; i < pool.length; i++) {
+    const q = pool[i];
+    const d = dist2(lon, lat, q.longitude, q.latitude);
+    if (d < bestD) { bestD = d; best = q; }
+  }
+  return best;
 }
 
-// Compute the base radius used for a quake (matches draw logic)
+// Compute base radius consistent with your draw logic
 function baseRadiusForQuake(d) {
-    const useOverall = (document.querySelector('input[name="sizeMode"]:checked')?.value === 'overall');
-    if (useOverall) {
-        return sizeScale_sig(d.sig ?? 0);
-    }
-    let rMag = chkMag.checked ? sizeScale_mag(d.mag ?? 0) : 0;
-    let rCDI = chkCDI.checked ? sizeScale_cdi(d.cdi ?? 0) : 0;
-    let rMMI = chkMMI.checked ? sizeScale_mmi(d.mmi ?? 0) : 0;
-    if (!chkMag.checked && !chkCDI.checked && !chkMMI.checked) {
-        rMag = sizeScale_mag(d.mag ?? 0);
-    }
-    return Math.max(rMag || 0, rCDI || 0, rMMI || 0) || sizeScale_mag(d.mag ?? 0);
+  const useOverall = (document.querySelector('input[name="sizeMode"]:checked')?.value === 'overall');
+  if (useOverall) {
+    return sizeScale_sig(d.sig ?? 0);
+  }
+  let rMag = chkMag.checked ? sizeScale_mag(d.mag ?? 0) : 0;
+  let rCDI = chkCDI.checked ? sizeScale_cdi(d.cdi ?? 0) : 0;
+  let rMMI = chkMMI.checked ? sizeScale_mmi(d.mmi ?? 0) : 0;
+  if (!chkMag.checked && !chkCDI.checked && !chkMMI.checked) {
+    rMag = sizeScale_mag(d.mag ?? 0);
+  }
+  return Math.max(rMag || 0, rCDI || 0, rMMI || 0) || sizeScale_mag(d.mag ?? 0);
 }
 
-// Draw a pulsing highlight at a quake (overlay, scales with zoom). Returns a cleanup function.
+// Draw a pulsing highlight at a quake (overlay, scales with zoom). Returns a cleanup.
 function drawHighlightForQuake(q) {
-    // clear any previous highlight
-    gStory.selectAll('*').remove();
+  clearStoryHighlight();
 
-    const proj = currentBasemap.projection;
-    const pt = proj([q.longitude, q.latitude]);
-    if (!pt) return () => {};
+  const proj = currentBasemap.projection;
+  const pt = proj([q.longitude, q.latitude]);
+  if (!pt) return () => {};
 
-    const factor = Math.pow(zoomK, RADIUS_ZOOM_EXP) / zoomK;
-    const rBase = baseRadiusForQuake(q);
-    const r = Math.max(6, rBase * factor * 1.6);
+  const factor = Math.pow(zoomK, RADIUS_ZOOM_EXP) / zoomK;
+  const rBase = baseRadiusForQuake(q);
+  const r = Math.max(6, rBase * factor * 1.6);
 
-    // soft halo
-    const halo = gStory.append('circle')
-        .attr('class', 'ring story-halo')
-        .attr('data-r', rBase * 1.6)     // so adjustCircleSizes keeps it right
-        .attr('cx', pt[0]).attr('cy', pt[1])
-        .attr('r', r)
-        .attr('fill', COLORS.highlight + '22')
-        .attr('stroke', COLORS.highlight)
-        .attr('stroke-width', 4)
-        .attr('stroke-opacity', 0.7);
+  const halo = gStory.append('circle')
+    .attr('class', 'ring story-halo')
+    .attr('data-r', rBase * 1.6)
+    .attr('cx', pt[0]).attr('cy', pt[1])
+    .attr('r', r)
+    .attr('fill', COLORS.highlight + '22')
+    .attr('stroke', COLORS.highlight)
+    .attr('stroke-width', 4)
+    .attr('stroke-opacity', 0.7);
 
-    // pulsing ring
-    const pulse = gStory.append('circle')
-        .attr('class', 'ring story-highlight')
-        .attr('data-r', rBase * 1.9)
-        .attr('cx', pt[0]).attr('cy', pt[1])
-        .attr('r', Math.max(8, r * 1.1))
-        .attr('fill', 'none')
-        .attr('stroke', COLORS.highlight)
-        .attr('stroke-width', 2.5)
-        .attr('stroke-opacity', 0.95);
+  const pulse = gStory.append('circle')
+    .attr('class', 'ring story-highlight')
+    .attr('data-r', rBase * 1.9)
+    .attr('cx', pt[0]).attr('cy', pt[1])
+    .attr('r', Math.max(8, r * 1.1))
+    .attr('fill', 'none')
+    .attr('stroke', COLORS.highlight)
+    .attr('stroke-width', 2.5)
+    .attr('stroke-opacity', 0.95);
 
-    // loop pulse animation
-    function loop() {
-        pulse
-            .attr('stroke-opacity', 0.95)
-            .attr('r', Math.max(10, r * 1.1))
-            .transition().duration(900).ease(d3.easeCubicOut)
-            .attr('r', Math.max(16, r * 1.8))
-            .attr('stroke-opacity', 0.05)
-            .on('end', loop);
-    }
-    loop();
+  function loop() {
+    pulse
+      .attr('stroke-opacity', 0.95)
+      .attr('r', Math.max(10, r * 1.1))
+      .transition().duration(900).ease(d3.easeCubicOut)
+      .attr('r', Math.max(16, r * 1.8))
+      .attr('stroke-opacity', 0.05)
+      .on('end', () => {
+        if (!storyRunning || storyEndRequested) return;
+        loop();
+      });
+  }
+  loop();
 
-    // If the actual group exists, briefly bump its opacity
-    gQuake.selectAll('g.quake')
-        .filter(d => d === q)
-        .select('g.rings')
-        .transition().duration(250)
-        .attr('opacity', 1)
-        .transition().duration(250)
-        .attr('opacity', 1);
-
-    // ensure sizes follow zoom
-    adjustCircleSizes();
-
-    // cleanup
-    return () => {
-        gStory.selectAll('*').interrupt().remove();
-    };
+  adjustCircleSizes();
+  return () => clearStoryHighlight();
 }
 
+// Smooth zoom to lon/lat with given scale
 function flyTo(lon, lat, k = 6, duration = 1600) {
-    const v = viewportSize();
-    const pt = currentBasemap.projection([lon, lat]);
-    const t = d3.zoomIdentity
-        .translate(v.w / 2, v.h / 2)
-        .scale(k)
-        .translate(-pt[0], -pt[1]);
-    return new Promise(resolve => {
-        svg.transition().duration(duration).ease(d3.easeCubicInOut)
-            .call(zoom.transform, t)
-            .on('end', resolve);
-    });
+  const v = viewportSize();
+  const pt = currentBasemap.projection([lon, lat]);
+  const t = d3.zoomIdentity
+    .translate(v.w / 2, v.h / 2)
+    .scale(k)
+    .translate(-pt[0], -pt[1]);
+  return new Promise(resolve => {
+    svg.transition().duration(duration).ease(d3.easeCubicInOut)
+      .call(zoom.transform, t)
+      .on('end', () => resolve());
+  });
 }
 
-function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// Wait while respecting pause; also drive progress bar
-async function waitWithProgress(totalMs) {
-    setProgress(0);
+// Wait with progress bar, respecting pause, end, and next-step jump
+function waitWithProgress(totalMs) {
+  return new Promise(resolve => {
     const start = performance.now();
-    let consumedPaused = 0;
     let last = start;
-    return new Promise(resolve => {
-        function tick(now) {
-            if (storyPaused) {
-                consumedPaused += now - last;
-                last = now;
-                setProgress(0);
-                requestAnimationFrame(tick);
-                return;
-            }
-            const elapsed = now - start - consumedPaused;
-            const pct = Math.min(1, elapsed / totalMs);
-            setProgress(pct * 100);
-            last = now;
-            if (pct >= 1) resolve();
-            else requestAnimationFrame(tick);
-        }
+    let pausedOffset = 0;
+
+    function tick(now) {
+      if (storyEndRequested || storyJumpRequested) {
+        setProgress(100);
+        return resolve();
+      }
+      if (!storyRunning) {
+        // story was externally ended
+        setProgress(0);
+        return resolve();
+      }
+
+      const dt = now - last;
+      last = now;
+
+      if (storyPaused) {
+        pausedOffset += dt;
         requestAnimationFrame(tick);
-    });
+        return;
+      }
+
+      const elapsed = now - start - pausedOffset;
+      const pct = Math.min(1, elapsed / totalMs);
+      setProgress(pct * 100);
+
+      if (pct >= 1) {
+        return resolve();
+      }
+      requestAnimationFrame(tick);
+    }
+    setProgress(0);
+    requestAnimationFrame(tick);
+  });
 }
+
+// Cleanly end story and reset state so it can be replayed
+function endStory(resetView = true) {
+  clearStoryHighlight();
+  hideStoryNote();
+  setProgress(0);
+
+  storyRunning = false;
+  storyPaused = false;
+  storyEndRequested = false;
+  storyJumpRequested = false;
+  storyStepIndex = 0;
+
+  updateStoryButtons();
+
+  if (resetView) {
+    // simple reset back to world view
+    resetZoom(400);
+    updateZoomUI();
+  }
+}
+
+// ---------- Main story coroutine ----------
 
 async function playStory() {
-    if (storyRunning) return;
-    storyRunning = true;
-    storyPaused = false;
-    updateStoryPauseButton();
+  if (storyRunning) return;
 
-    // Always show all points + overall mode for consistent visuals
-    setTimeSlider(-1);
-    const overallRadio = document.querySelector('input[value="overall"]');
-    if (overallRadio) overallRadio.checked = true;
-    applyFiltersAndRender();
-    renderLegend();
+  storyRunning = true;
+  storyPaused = false;
+  storyEndRequested = false;
+  storyJumpRequested = false;
+  storyStepIndex = 0;
+  updateStoryButtons();
 
-    const steps = [
-        {
-            year: 2001,
-            title: '2001 Gujarat, India (Mw 7.7)',
-            lon: 70.326, lat: 23.388, k: 6.5,
-            html: `<b>Gujarat (Bhuj)</b>: at least ~20,000 deaths; widespread collapse across Kutch and beyond. Source: U.S. Geological Survey (USGS).`,
-        },
-        {
-            year: 2004,
-            title: '2004 Sumatra–Andaman (Mw 9.1)',
-            lon: 95.85, lat: 3.32, k: 5.8,
-            html: `<b>Indian Ocean tsunami</b>: one of the deadliest disasters on record; waves &gt;30 m; ~230k fatalities. Source: USGS.`,
-        },
-        {
-            year: 2008,
-            title: '2008 Wenchuan (Sichuan), China (Mw 7.9)',
-            lon: 103.4, lat: 31.0, k: 6.6,
-            html: `<b>Wenchuan quake</b>: ~87,000 dead or missing; massive landslides and school collapses. Source: USGS.`,
-        },
-        {
-            year: 2010,
-            title: '2010 Haiti (Mw 7.0)',
-            lon: -72.533, lat: 18.457, k: 7.2,
-            html: `<b>Port-au-Prince area</b>: catastrophic damage; death toll in the hundreds of thousands. Source: USGS.`,
-        },
-        {
-            year: 2011,
-            title: '2011 Tōhoku, Japan (Mw 9.1)',
-            lon: 142.372, lat: 38.297, k: 6.2,
-            html: `<b>Great East Japan Earthquake & Tsunami</b>: ~20k dead/missing; Fukushima crisis. Source: USGS.`,
-        },
-        {
-            year: 2015,
-            title: '2015 Gorkha, Nepal (Mw 7.8)',
-            lon: 84.73, lat: 28.23, k: 6.8,
-            html: `<b>Kathmandu Valley</b>: widespread destruction; ~10k fatalities. Source: USGS.`,
-        },
-        {
-            year: 2018,
-            title: '2018 Sulawesi (Palu), Indonesia (Mw 7.5)',
-            lon: 119.84, lat: -0.178, k: 7.0,
-            html: `<b>Palu Bay</b>: destructive tsunami and extensive liquefaction; thousands killed. Source: NOAA/USGS.`,
-        },
-    ];
+  // Use overall mode & full time range for consistency
+  setTimeSlider(-1);
+  const overallRadio = document.querySelector('input[value="overall"]');
+  if (overallRadio) overallRadio.checked = true;
+  applyFiltersAndRender();
+  renderLegend();
 
-    // Slow down: longer fly + dwell; add progress bar per step
-    const FLY_MS = 1000;
-    const DWELL_MS = 7000;
+  const FLY_MS   = 1000;
+  const DWELL_MS = 7000;
 
-    // Gentle world reset before starting
+  try {
+    // Gentle world reset first
     await flyTo(0, 20, 1.2, 900);
+    if (storyEndRequested) return endStory(true);
     await waitWithProgress(800);
+    if (storyEndRequested) return endStory(true);
 
-    for (const s of steps) {
-        // Fly
-        await flyTo(s.lon, s.lat, s.k, FLY_MS);
+    for (storyStepIndex = 0; storyStepIndex < STORY_STEPS.length; storyStepIndex++) {
+      const s = STORY_STEPS[storyStepIndex];
+      storyJumpRequested = false; // clear jump flag at start of each step
 
-        // Find the actual recorded event nearest to the step's epicenter (prefer same year)
-        const q = findNearestQuake(s.lon, s.lat, s.year) || { longitude: s.lon, latitude: s.lat, mag: null, sig: null };
+      if (storyEndRequested) break;
 
-        // Draw highlight (returns cleanup)
-        const cleanup = drawHighlightForQuake(q);
+      await flyTo(s.lon, s.lat, s.k, FLY_MS);
+      if (storyEndRequested) break;
 
-        // Show note at top
-        showStoryNote(s.title, s.html);
+      const q = findNearestQuake(s.lon, s.lat, s.year) || {
+        longitude: s.lon, latitude: s.lat, mag: null, sig: null
+      };
 
-        // Dwell while progress animates and pause is respected
-        await waitWithProgress(DWELL_MS);
+      drawHighlightForQuake(q);
+      showStoryNote(s.title, s.html);
 
-        // Clean up this step's highlight before moving on
-        cleanup();
+      await waitWithProgress(DWELL_MS);
+      clearStoryHighlight();
+
+      if (storyEndRequested) break;
+      // if storyJumpRequested was set, we simply move on to the next iteration
     }
 
-    hideStoryNote();
-    // end by resetting to world
-    await flyTo(0, 20, 1.0, 900);
-    resetZoom(0);
-    updateZoomUI();
-
-    storyRunning = false;
-    storyPaused = false;
-    updateStoryPauseButton();
+    // Finish: fall through to endStory
+    endStory(true);
+  } catch (e) {
+    // In case of any unexpected error, ensure we reset state
+    console.error('Story mode error:', e);
+    endStory(true);
+  }
 }
 
 // ---------- End story mode ----------
+
