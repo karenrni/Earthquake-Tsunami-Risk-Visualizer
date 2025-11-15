@@ -122,7 +122,8 @@ main#viz { position:relative; min-height:70vh; background:#0a1128; } /* dark nav
 #mapTimeline .small button { padding:6px 8px; font-size:12px; }
 #timeLabel { font-size:13px; color:var(--muted); }
 
-#btnClearFilters {
+/* // PRIMARY BUTTON STYLE */
+.primary {
   padding:10px 12px;
   border-radius:10px;
   border:1px solid var(--ring);
@@ -224,7 +225,7 @@ main#viz { position:relative; min-height:70vh; background:#0a1128; } /* dark nav
   display:flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;                /* little space between title and circles */
+  gap: 6px;               
 }
 #legendPanel .legend-row.stacked .legend-title{
   display:flex;
@@ -335,6 +336,8 @@ main#viz { position:relative; min-height:70vh; background:#0a1128; } /* dark nav
     color: #0f172a;
 }
 
+/* INTRO PAGE */
+
 #introOverlay {
     position: fixed;
     inset: 0;
@@ -343,7 +346,7 @@ main#viz { position:relative; min-height:70vh; background:#0a1128; } /* dark nav
     align-items: center;
     justify-content: center;
     text-align: center;
-    background: #0b1120; /* your navy */
+    background: #0b1120; 
     color: #f3f4f6;
     z-index: 9999;
     opacity: 1;
@@ -396,3 +399,42 @@ main#viz { position:relative; min-height:70vh; background:#0a1128; } /* dark nav
     z-index: 2;
   }
   
+  /* REGION BUTTONS  */
+  .region-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  
+  .region-btn {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--ring);
+    background: #fff;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .region-btn:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  
+  .region-btn:active {
+    transform: scale(0.95);
+  }
+  
+  /* BIG World button */
+  #btnWorld {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    border: none;
+  }
+  
+  #btnWorld:hover {
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  }

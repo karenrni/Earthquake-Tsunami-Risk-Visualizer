@@ -439,27 +439,6 @@ function loadBasemap(target) {
         update => update.attr('d', pathGen),
         exit => exit.remove()
     );
-    // gLand.selectAll('path.country')
-    //     .data(feats, d => d.id || d.properties?.adm0_a3 || d.properties?.name)
-    //     .join(
-    //         enter => enter.append('path')
-    //             .attr('class', 'country')
-    //             .attr('fill', d => {
-    //               // Different colors for different regions
-    //               const name = d.properties?.name || '';
-    //               if (name.includes('Desert') || name.includes('Arabia')) return '#e8d5b7';
-    //               if (name.includes('forest') || name.includes('Brazil')) return '#c8d4c0';
-    //               return '#d4e0d4'; // default soft green-gray
-    //           })
-    //             .attr('stroke', '#1e2a4c')
-    //             .attr('stroke-width', 0.5)
-    //             .attr('d', pathGen),
-    //         update => update.attr('d', pathGen),
-    //         exit => exit.remove()
-    //     );
-
-    // setZoomExtents();
-    // drawBackgrounds();
 }
 
 // Time bucketing 
