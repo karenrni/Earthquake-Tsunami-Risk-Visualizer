@@ -141,41 +141,54 @@
         </div>
       </div>
 
-      <div class="group">
-        <div class="group-title">Time Slider Window</div>
-        <div class="radio-row">
-          <label class="radio"><input type="radio" name="window" value="month"> Monthly</label>
-          <label class="radio"><input type="radio" name="window" value="year" checked> Yearly</label>
-        </div>
-      </div>
+ 
     </aside>
 
     <!-- MAP -->
-    <main id="viz">
-      <svg id="map" role="img" aria-label="Earthquake map"></svg>
-
-      <div id="zoomControls" aria-label="Map zoom controls">
-        <div id="zoomStatus">1.0×</div>
-        <button id="zoomIn" title="Zoom in">+</button>
-        <button id="zoomOut" title="Zoom out">−</button>
-        <button id="zoomReset" title="Fit to World">⟳</button>
-      </div>
-
-      <div id="mapTimeline" role="group" aria-label="Timeline controls">
-        <div class="group-title">Time Slider</div>
-        <div class="timeline-row">
-          <button id="btnPrev" title="Previous">&#9664;</button>
-          <input type="range" id="timeSlider" min="0" max="0" step="1" value="0" disabled>
-          <button id="btnNext" title="Next">&#9654;</button>
-          <button id="btnPlay" title="Play/Pause">Play</button>
-          <button id="btnShowAll" class="ghost" title="Show all">All</button>
+<!-- MAP -->
+<main id="viz">
+    <svg id="map" role="img" aria-label="Earthquake map"></svg>
+  
+    <div id="zoomControls" aria-label="Map zoom controls">
+      <div id="zoomStatus">1.0×</div>
+      <button id="zoomIn" title="Zoom in">+</button>
+      <button id="zoomOut" title="Zoom out">−</button>
+      <button id="zoomReset" title="Fit to World">⟳</button>
+    </div>
+  
+    <!-- COMBINED TIME CONTROLS -->
+    <div id="mapTimeline" role="group" aria-label="Timeline controls">
+      <div class="timeline-header">
+        <span class="timeline-title">Time Navigation</span>
+        <div class="window-toggle">
+          <label class="window-option">
+            <input type="radio" name="window" value="year" checked>
+            <span>Yearly</span>
+          </label>
+          <label class="window-option">
+            <input type="radio" name="window" value="month">
+            <span>Monthly</span>
+          </label>
         </div>
-        <div id="timeLabel">—</div>
       </div>
-
-      <div id="tooltip" class="hidden" role="dialog" aria-live="polite"></div>
-    </main>
-  </div>
+  
+      <div class="timeline-row">
+        <button id="btnPrev" title="Previous" class="timeline-nav">◀</button>
+        <input type="range" id="timeSlider" min="0" max="0" step="1" value="0" disabled>
+        <button id="btnNext" title="Next" class="timeline-nav">▶</button>
+      </div>
+  
+      <div id="timeLabel">—</div>
+  
+      <div class="timeline-actions">
+        <button id="btnPlay" class="timeline-action play">▶ Play Timeline</button>
+        <button id="btnShowAll" class="timeline-action show-all">Show All Events</button>
+      </div>
+    </div>
+  
+    <div id="tooltip" class="hidden" role="dialog" aria-live="polite"></div>
+  </main>
+  
   <div id="quakeDetailPanel" class="hidden">
     <button id="closePanelBtn" aria-label="Close panel">×</button>
     <div id="panelContent"></div>
