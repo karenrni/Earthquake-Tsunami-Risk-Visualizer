@@ -834,7 +834,7 @@ function adjustCircleSizes() {
 
 // Tooltip section
 function showTooltip(event, d) {
-    const timeFmt = d3.timeFormat('%b %d, %Y %H:%M UTC');
+    const timeFmt = d3.timeFormat('%b %d, %Y %H:%M UTC'); //utc for now
 
     function badge(text, color, borderColor = '#000', textColor = '#111') {
         return `
@@ -854,6 +854,21 @@ function showTooltip(event, d) {
     }
 
     const lines = [];
+
+    lines.push(`
+      <div style="
+        font-size:14px; 
+        font-weight:600; 
+        margin-bottom:6px; 
+        border-bottom:1px solid #ddd; 
+        padding-bottom:4px;
+        cursor:pointer;
+        color:#333;
+      ">
+        Click for more details
+      </div>
+    `);
+
     lines.push(`
     <div style="font-size:12px; color:#666; margin-bottom:4px;">
       ${d.time ? timeFmt(d.time) : ''}
