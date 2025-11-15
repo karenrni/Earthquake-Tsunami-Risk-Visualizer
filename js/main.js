@@ -986,7 +986,7 @@ function renderLegend() {
             .attr('height', 96);
 
         ticks.forEach((v, i) => {
-            const r = scale(v) * factor;
+            const r = scale(v); //  * factor removed, CULPRIT for zoom circle size increase
             const cx = rowLeft + i * spacingX;
 
             svgL.append('circle')
