@@ -1,6 +1,3 @@
-/* global d3, topojson */
-
-// ---------- Config ----------
 const FILES = {
     world: 'data/world_lowres.json',
     na: 'data/NA_lowres.json',
@@ -54,9 +51,9 @@ const svg = d3.select('#map');
 // Layer order
 const gRoot = svg.append('g').attr('class', 'root');
 const gBackground = gRoot.append('g').attr('class', 'background'); // page canvas
-const gOval = gRoot.append('g').attr('class', 'oval');             // ocean "oval"
-const gPlates = gRoot.append('g').attr('class', 'plates');
+const gOval = gRoot.append('g').attr('class', 'oval');             // ocean oval thing
 const gLand = gRoot.append('g').attr('class', 'land');
+const gPlates = gRoot.append('g').attr('class', 'plates');
 const gQuake = gRoot.append('g').attr('class', 'quakes');
 const gStory = gRoot.append('g').attr('class', 'story-overlay');   // overlays for story highlights
 
@@ -155,7 +152,7 @@ function setZoomExtents() {
     const v = viewportSize();
     zoom.extent([[0, 0], [v.w, v.h]]);
 
-    // Constrain pan to feature bounds + padding (+15% vertical)
+    // Constrain pan to feature bounds + padding (+15% vertical) :P
     if (currentBasemap && currentBasemap.feature) {
         const pathGen = d3.geoPath(currentBasemap.projection);
         const b = pathGen.bounds(currentBasemap.feature);
@@ -182,7 +179,7 @@ if (zoomInBtn) zoomInBtn.addEventListener('click', () => svg.transition().durati
 if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => svg.transition().duration(200).call(zoom.scaleBy, 1/1.3));
 if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => { loadBasemap(WORLD_INIT); resetZoom(250); drawAll(); });
 
-// ---------- Controls wiring ----------
+//  Controls wiring
 function updateComboVisibility() {
     const checked = document.querySelector('input[name="sizeMode"]:checked');
     comboMetricsGroup.style.display = (checked && checked.value === 'combo') ? 'block' : 'none';
@@ -229,7 +226,7 @@ d3.select('#magRangeSlider').append('g').attr('transform', 'translate(20,10)').c
     }
 })();
 
-// Ensure the tsunami toggle is inside the Filters group
+// Tsunami toggle is inside the Filters group
 (function moveTsunamiToggleIntoFilters() {
     const toggleRow = document.querySelector('.toggle-row');
     const clearBtn = document.getElementById('btnClearFilters');
@@ -258,14 +255,14 @@ btnClearFilters.addEventListener('click', () => {
     applyFiltersAndRender();
 });
 
-// --- Timeline: put Play + "Display All" on the LEFT with correct labels ---
+// Timeline: put Play + "Display All" on the LEFT
 (function reorderTimelineButtons() {
     if (!timeline) return;
     // Labels
     if (btnPlay) btnPlay.textContent = 'Play Timeline';
     if (btnShowAll) btnShowAll.textContent = 'Display All';
 
-    // Enforce order: [Play Timeline, Display All, Prev, Slider, Next]
+    // Enforce order (of): Play Timeline, Display All, Prev, Slider, Next
     const desired = [btnPlay, btnShowAll, btnPrev, timeSlider, btnNext].filter(Boolean);
     desired.forEach(el => timeline.appendChild(el)); // append reorders to end in given sequence
 })();
@@ -280,7 +277,7 @@ document.querySelectorAll('input[name="window"]').forEach(r => {
     });
 });
 
-// Region buttons
+// Region zoom buttons
 btnWorld.addEventListener('click', () => { loadBasemap(WORLD_INIT); resetZoom(); drawAll(); });
 btnNA.addEventListener('click', () => { loadBasemap(NA_INIT); resetZoom(); drawAll(); });
 if (btnIndonesia) btnIndonesia.addEventListener('click', () => { loadBasemap(INDONESIA_INIT); resetZoom(); drawAll(); });
@@ -300,7 +297,7 @@ btnNext.addEventListener('click', () => {
 btnPlay.addEventListener('click', () => togglePlay());
 btnShowAll.addEventListener('click', () => { setTimeSlider(-1); applyFiltersAndRender(); });
 
-// ---------- Data load ----------
+// Data loading
 Promise.all([
     d3.json(FILES.world),
     d3.json(FILES.na),
@@ -334,7 +331,6 @@ Promise.all([
 
     showIntroOverlay(); // title screen on top
 
-    // Add the "Play Story" button pinned at the TOP (bigger + styled)
     addPlayStoryButton();
 }).catch((err) => {
     console.error('data load error:', err);
@@ -393,7 +389,7 @@ function loadBasemap(target) {
     const feats = currentBasemap.feature?.features ?? [];
     const pathGen = d3.geoPath(currentBasemap.projection);
 
-    // Plates (subtle, behind land)
+    // Plates 
     if (currentBasemap.plates?.features) {
         gPlates.selectAll('path.plate-boundary')
             .data(currentBasemap.plates.features, (d, i) => d.id || i)
@@ -401,7 +397,7 @@ function loadBasemap(target) {
                 enter => enter.append('path')
                     .attr('class', 'plate-boundary')
                     .attr('fill', 'none')
-                    .attr('stroke', '#6b7280')
+                    .attr('stroke', 'none')
                     .attr('stroke-width', 0.6)
                     .attr('stroke-opacity', 0.25)
                     .attr('d', pathGen)
@@ -414,24 +410,77 @@ function loadBasemap(target) {
     }
 
     // Land
-    gLand.selectAll('path.country')
-        .data(feats, d => d.id || d.properties?.adm0_a3 || d.properties?.name)
-        .join(
-            enter => enter.append('path')
-                .attr('class', 'country')
-                .attr('fill', '#e5e7eb')
-                .attr('stroke', '#1e2a4c')
-                .attr('stroke-width', 0.5)
-                .attr('d', pathGen),
-            update => update.attr('d', pathGen),
-            exit => exit.remove()
-        );
+  gLand.selectAll('path.country')
+    .data(feats, d => d.id || d.properties?.adm0_a3 || d.properties?.name)
+    .join(
+        enter => enter.append('path')
+            .attr('class', 'country')
+            .attr('fill', d => {
+                // Get center point of a country
+                const bounds = pathGen.bounds(d);
+                const centerLat = (bounds[0][1] + bounds[1][1]) / 2;
+                const centerLon = (bounds[0][0] + bounds[1][0]) / 2;
+                
+                // Project back to the coordinates
+                const geoCenter = currentBasemap.projection.invert([centerLon, centerLat]);
+                if (!geoCenter) return '#d0dbc7';
+                
+                const lat = geoCenter[1];
+                const lon = geoCenter[0];
+                
+                // Latitude zones
+                const absLat = Math.abs(lat);
+                
+                // Polar
+                if (absLat > 60) {
+                    const t = (absLat - 60) / 30; 
+                    return d3.interpolateRgb('#d8e3d8', '#f0f2f0')(t);
+                }
+                
+                // Desert belt
+                if (absLat > 15 && absLat < 35) {
+                    const t = Math.abs(absLat - 25) / 10; //peak heat
+                    return d3.interpolateRgb('#faf0e6', '#c8d5c0')(t);
+                }
+                
+                // Tropical
+                if (absLat < 15) {
+                    return '#c2d4bc';
+                }
+                
+                // Temperate default
+                return '#d0dbc7';
+            })
+            .attr('stroke', '#99a88a')
+            .attr('stroke-width', 0.35)
+            .attr('d', pathGen),
+        update => update.attr('d', pathGen),
+        exit => exit.remove()
+    );
+    // gLand.selectAll('path.country')
+    //     .data(feats, d => d.id || d.properties?.adm0_a3 || d.properties?.name)
+    //     .join(
+    //         enter => enter.append('path')
+    //             .attr('class', 'country')
+    //             .attr('fill', d => {
+    //               // Different colors for different regions
+    //               const name = d.properties?.name || '';
+    //               if (name.includes('Desert') || name.includes('Arabia')) return '#e8d5b7';
+    //               if (name.includes('forest') || name.includes('Brazil')) return '#c8d4c0';
+    //               return '#d4e0d4'; // default soft green-gray
+    //           })
+    //             .attr('stroke', '#1e2a4c')
+    //             .attr('stroke-width', 0.5)
+    //             .attr('d', pathGen),
+    //         update => update.attr('d', pathGen),
+    //         exit => exit.remove()
+    //     );
 
-    setZoomExtents();
-    drawBackgrounds();
+    // setZoomExtents();
+    // drawBackgrounds();
 }
 
-// ---------- Time bucketing ----------
+// Time bucketing 
 function bucketByTime() {
     const usable = quakes.filter(q => (windowMode === 'month')
         ? (q.year != null && q.month != null && q.month >= 1 && q.month <= 12)
@@ -571,7 +620,7 @@ function drawQuakes() {
     });
 
     // -------------------------------------------------------------
-    // Updated ringSpec generator — only one source of rings
+    // ringSpec generator — only one source of rings !!!!
     // -------------------------------------------------------------
     rowsAll.each(function(d) {
         const container = d3.select(this).select('g.rings');
@@ -614,7 +663,7 @@ function drawQuakes() {
                 return specs;
             }
 
-            // --- Combo mode ---
+            //  Combo mode / seprated metrics
             const showMag = chkMag.checked;
             const showCDI = chkCDI.checked;
             const showMMI = chkMMI.checked;
@@ -733,7 +782,7 @@ function drawQuakes() {
         });
 
 
-    // Fade-in enter
+    // Fade-in enter vis
     rowsEnter.select('g.rings')
         .attr('opacity', 0)
         .transition().duration(400)
@@ -750,7 +799,7 @@ function adjustCircleSizes() {
     });
 }
 
-// ---------- Tooltip ----------
+// Tooltip section
 function showTooltip(event, d) {
     const timeFmt = d3.timeFormat('%b %d, %Y %H:%M UTC');
 
@@ -860,7 +909,7 @@ function hideTooltip() { tip.classed('hidden', true); }
 
 function fmtNA(v, p=1) { return (v == null || Number.isNaN(v)) ? '—' : (+v).toFixed(p); }
 
-// ---------- Legend ----------
+//  Legends
 function renderLegend() {
     colorLegendDiv.html('');
     sizeLegendDiv.html('');
@@ -915,7 +964,7 @@ function renderLegend() {
             ticks = d3.ticks(Math.floor(lo), Math.ceil(hi), 4);
         } else {
             const [lo, hi] = scale.domain();
-            // rounded significance/CDI/MMI values
+            // rounded  values
             ticks = d3.ticks(lo, hi, 4);
         }
 
@@ -957,7 +1006,7 @@ function renderLegend() {
         });
     });
 
-    // Depth legend + tsunami legend
+    // Depth + tsunami legend
     (function addDepthRow() {
         const depths = [100, 300, 600];
         const w = 230, h = 75, cx0 = 42, spacing = 70, cyR = 28;
@@ -1011,7 +1060,7 @@ function renderLegend() {
           .attr('vector-effect', 'non-scaling-stroke');
   })();
   
-  // Add tectonic plate boundaries legend
+  // tectonic plate boundaries legend
   (function addPlateBoundariesRow() {
       const w = 220, h = 48, x1 = 20, x2 = 80, cy = 24;
   
@@ -1037,7 +1086,7 @@ function renderLegend() {
     
 }
 
-// ---------- Play loop (timeline) ----------
+//  Play loop FOR timeline
 function togglePlay() {
     playing = !playing;
     btnPlay.textContent = playing ? 'Pause Timeline' : 'Play Timeline';
@@ -1053,11 +1102,11 @@ function stepPlay() {
     setTimeout(stepPlay, 900);
 }
 
-// ---------- Backgrounds ----------
+// Backgrounds 
 function drawBackgrounds() {
     const v = viewportSize();
 
-    // Deep navy canvas (behind ocean oval)
+    // Deep navy canvas
     gBackground.selectAll('rect.bg').data([1])
         .join('rect')
         .attr('class','bg')
@@ -1065,7 +1114,7 @@ function drawBackgrounds() {
         .attr('width', v.w*3).attr('height', v.h*3)
         .attr('fill', NAVY_BG);
 
-    // Ocean oval only for world view
+    // Ocean oval ONLY for world view
     if (currentBasemap.type !== 'world') {
         gOval.selectAll('path.ocean-shape').remove();
         return;
@@ -1102,10 +1151,10 @@ function drawBackgrounds() {
         .attr('fill', '#93c5fd');
 }
 
-// ---------- Draw wrapper ----------
+// Draw wrapper
 function drawAll() { drawBackgrounds(); drawQuakes(); }
 
-// ---------- Intro overlay ----------
+//  Intro overlay
 function showIntroOverlay() {
     const overlay = document.createElement('div');
     overlay.id = 'introOverlay';
@@ -1172,7 +1221,7 @@ function showIntroOverlay() {
     });
 }
 
-// ---------- Story mode (full replacement) ----------
+// Story section
 
 // Global story state
 let storyRunning = false;
@@ -1227,13 +1276,13 @@ const STORY_STEPS = [
   },
 ];
 
-// ---------- Story UI ----------
+// UI STORY
 
 function addPlayStoryButton() {
   const container = document.querySelector('main#viz');
   if (!container) return;
 
-  // Big top-center "Play Story" button
+  // Play Story button
   const btn = document.createElement('button');
   btn.id = 'btnPlayStory';
   btn.textContent = '▶ Play Story - Major Earthquakes';
@@ -1272,7 +1321,8 @@ function addPlayStoryButton() {
   });
   container.appendChild(btn);
 
-  // Story note container (top, with Pause / Next / End / progress bar)
+  // Story note container 
+  // top, with Pause / Next / End / progress bar
   const note = document.createElement('div');
   note.id = 'storyNote';
   Object.assign(note.style, {
@@ -1329,13 +1379,13 @@ function addPlayStoryButton() {
 
   nextBtn.addEventListener('click', () => {
     if (!storyRunning) return;
-    // ask the current step to finish early and advance to the next one
+    // current step to finish early, advance to next
     storyJumpRequested = true;
   });
 
   endBtn.addEventListener('click', () => {
     if (!storyRunning) return;
-    // request a hard stop; playStory will see this and fully exit
+    // request a hard stop; playStory uses to fully exit
     storyEndRequested = true;
   });
 
@@ -1395,13 +1445,14 @@ function setProgress(pct) {
   if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + '%';
 }
 
-// ---------- Story helpers ----------
+// Story helper funcs
 
 function clearStoryHighlight() {
   gStory.selectAll('*').interrupt().remove();
 }
 
-// Find the nearest recorded quake to a lon/lat, preferring the same year if available.
+// Find the nearest recorded quake to a lon/lat
+// prefernecing same year if avail
 function findNearestQuake(lon, lat, year) {
   const dist2 = (aLon, aLat, bLon, bLat) => {
     const dx = (aLon - bLon);
@@ -1422,7 +1473,7 @@ function findNearestQuake(lon, lat, year) {
   return best;
 }
 
-// Compute base radius consistent with your draw logic
+// Compute base radius
 function baseRadiusForQuake(d) {
   const useOverall = (document.querySelector('input[name="sizeMode"]:checked')?.value === 'overall');
   if (useOverall) {
@@ -1437,7 +1488,8 @@ function baseRadiusForQuake(d) {
   return Math.max(rMag || 0, rCDI || 0, rMMI || 0) || sizeScale_mag(d.mag ?? 0);
 }
 
-// Draw a pulsing highlight at a quake (overlay, scales with zoom). Returns a cleanup.
+// Draws a pulsing highlight at a given quake with overlay, scales with zoom. 
+// Returns a cleanup.
 function drawHighlightForQuake(q) {
   clearStoryHighlight();
 
@@ -1613,7 +1665,7 @@ async function playStory() {
       clearStoryHighlight();
 
       if (storyEndRequested) break;
-      // if storyJumpRequested was set, we simply move on to the next iteration
+      // if storyJumpRequested was set, move to next iteration
     }
 
     // Finish: fall through to endStory
@@ -1625,5 +1677,4 @@ async function playStory() {
   }
 }
 
-// ---------- End story mode ----------
 

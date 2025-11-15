@@ -1,5 +1,5 @@
 :root{
-  --bg:#0a1128; /* dark navy for main background */
+  --bg:#0a1128; 
   --panel:#f9fafb;
   --ink:#111827;
   --muted:#4b5563;
@@ -209,17 +209,17 @@ main#viz { position:relative; min-height:70vh; background:#0a1128; } /* dark nav
 }
 
 #introOverlay svg {
-  pointer-events: none; /* ✅ let clicks pass through the SVG */
+  pointer-events: none; 
   z-index: 0;
 }
 #introOverlay h1,
 #introOverlay p,
 #introOverlay button {
   position: relative;
-  z-index: 2; /* ✅ ensure text/button are above the SVG */
+  z-index: 2;
 }
 
-/* stack the metric label ABOVE its circles in the legend */
+/* stack legend */
 #legendPanel .legend-row.stacked{
   display:flex;
   flex-direction: column;
