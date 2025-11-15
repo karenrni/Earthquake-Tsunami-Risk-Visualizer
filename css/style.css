@@ -335,4 +335,64 @@ main#viz { position:relative; min-height:70vh; background:#0a1128; } /* dark nav
     color: #0f172a;
 }
 
-
+#introOverlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: #0b1120; /* your navy */
+    color: #f3f4f6;
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity .35s ease;
+  }
+  
+  #introOverlay.fade-out {
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  #introRingsSVG {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  
+  #introOverlay h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    z-index: 2;
+  }
+  
+  .intro-subtitle {
+    max-width: 720px;
+    color: #cbd5e1;
+    margin-bottom: 22px;
+    z-index: 2;
+  }
+  
+  #startVizBtn {
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid #1f2937;
+    background: #111827;
+    color: #e5e7eb;
+    cursor: pointer;
+    z-index: 2;
+  }
+  
+  .intro-source {
+    margin-top: 14px;
+    padding-top: 10px;
+    font-size: 11px;
+    color: #9ca3af;
+    line-height: 1.4;
+    z-index: 2;
+  }
+  

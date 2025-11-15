@@ -1416,70 +1416,40 @@ function drawAll() { drawBackgrounds(); drawQuakes(); }
 
 //  Intro overlay
 function showIntroOverlay() {
-    const overlay = document.createElement('div');
-    overlay.id = 'introOverlay';
-    Object.assign(overlay.style, {
-        position:'fixed', inset:'0', background: NAVY_BG, display:'flex',
-        alignItems:'center', justifyContent:'center', flexDirection:'column',
-        zIndex: 9999, color:'#f3f4f6', textAlign:'center'
-    });
+  const overlay = document.getElementById("introOverlay");
+  const ringsG = d3.select("#rings");
+  const W = window.innerWidth, H = window.innerHeight, cx = W/2, cy = H/2;
 
-    overlay.innerHTML = `
-    <div style="position:absolute; inset:0; overflow:hidden;">
-      <svg width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style="pointer-events:none">
-        <defs>
-          <radialGradient id="pulse" fx="50%">
-            <stop offset="0%" stop-color="#ff4d4d" stop-opacity="0.55"></stop>
-            <stop offset="60%" stop-color="#ff4d4d" stop-opacity="0.12"></stop>
-            <stop offset="100%" stop-color="#ff4d4d" stop-opacity="0"></stop>
-          </radialGradient>
-        </defs>
-        <g id="rings"></g>
-      </svg>
-    </div>
-    <h1 style="font-weight:700; letter-spacing:.3px; margin:0 16px 14px; font-size:28px; position:relative; z-index:2;">
-      Global Earthquake & Tsunami Visualization
-    </h1>
-    <p style="max-width:720px; margin:0 16px 22px; color:#cbd5e1; position:relative; z-index:2;">
-      Explore historical earthquakes by magnitude, felt and structural intensity, significance, depth, and tsunamis.
-    </p>
-    <button id="startVizBtn" style="
-      padding:10px 16px; border-radius:10px; border:1px solid #1f2937;
-      background:#111827; color:#e5e7eb; cursor:pointer; position:relative; z-index:2;
-    ">Start Visualization</button>
-  `;
-    document.body.appendChild(overlay);
+  function spawnRing() {
+      const r = ringsG.append('circle')
+          .attr('cx', cx)
+          .attr('cy', cy)
+          .attr('r', 0)
+          .attr('fill', 'url(#pulse)');
 
-    const svgSel = d3.select(overlay).select('svg');
-    const ringsG = svgSel.select('#rings');
-    const W = window.innerWidth, H = window.innerHeight, cx = W/2, cy = H/2;
-    function spawnRing() {
-        const r = ringsG.append('circle')
-            .attr('cx', cx).attr('cy', cy).attr('r', 0)
-            .attr('fill', 'url(#pulse)');
-        r.transition().duration(2400).ease(d3.easeCubicOut)
-            .attr('r', Math.max(W,H) * 0.6).style('opacity', 0)
-            .on('end', () => r.remove());
-    }
-    spawnRing();
-    const ringTimer = setInterval(spawnRing, 700);
+      r.transition()
+          .duration(2400)
+          .ease(d3.easeCubicOut)
+          .attr('r', Math.max(W, H) * 0.6)
+          .style('opacity', 0)
+          .on('end', () => r.remove());
+  }
 
-    document.getElementById('startVizBtn').addEventListener('click', () => {
-        clearInterval(ringTimer);
+  spawnRing();
+  const ringTimer = setInterval(spawnRing, 700);
 
-        overlay.style.transition = 'opacity .35s ease';
-        overlay.style.opacity = '0';
+  document.getElementById('startVizBtn').addEventListener('click', () => {
+      clearInterval(ringTimer);
+      overlay.classList.add("fade-out");
 
-        const overallRadio = document.querySelector('input[value="overall"]');
-        if (overallRadio) overallRadio.checked = true;
+      setTimeSlider(-1);
+      applyFiltersAndRender();
+      renderLegend();
 
-        setTimeSlider(-1);
-        applyFiltersAndRender();
-        renderLegend();
-
-        setTimeout(() => overlay.remove(), 380);
-    });
+      setTimeout(() => overlay.remove(), 380);
+  });
 }
+
 
 // Story section
 
