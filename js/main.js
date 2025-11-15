@@ -432,47 +432,7 @@ function loadBasemap(target) {
     .join(
         enter => enter.append('path')
             .attr('class', 'country')
-            .attr('fill', d => {
-                // Get center point of a country
-                const bounds = pathGen.bounds(d);
-                const centerLat = (bounds[0][1] + bounds[1][1]) / 2;
-                const centerLon = (bounds[0][0] + bounds[1][0]) / 2;
-                
-                // Project back to the coordinates
-                const geoCenter = currentBasemap.projection.invert([centerLon, centerLat]);
-                if (!geoCenter) return '#d0dbc7';
-                
-                const lat = geoCenter[1];
-                //const lon = geoCenter[0];
-                
-                // Latitude zones
-                if (lat < -60) {
-                  return '#ffffff';
-                }
-                const absLat = Math.abs(lat);
-                
-
-                // Polar
-                if (absLat > 60) {
-                    const t = (absLat - 60) / 30; 
-                    return d3.interpolateRgb('#d8e3d8', '#f0f2f0')(t);
-                }
-                
-                // Desert belt
-                if (absLat > 15 && absLat < 35) {
-                    const t = Math.abs(absLat - 25) / 10; //peak heat
-                    return d3.interpolateRgb('#faf0e6', '#c8d5c0')(t);
-                }
-                
-                // Tropical
-                if (absLat < 15) {
-                    return '#c2d4bc';
-                }
-
-                // Temperate default
-                return '#d0dbc7';
-
-            })
+            .attr('fill', '#d0dbc7')
             .attr('stroke', '#99a88a')
             .attr('stroke-width', 0.35)
             .attr('d', pathGen),
