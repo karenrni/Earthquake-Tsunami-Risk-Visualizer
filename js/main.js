@@ -426,11 +426,15 @@ function loadBasemap(target) {
                 if (!geoCenter) return '#d0dbc7';
                 
                 const lat = geoCenter[1];
-                const lon = geoCenter[0];
+                //const lon = geoCenter[0];
                 
                 // Latitude zones
+                if (lat < -60) {
+                  return '#ffffff';
+                }
                 const absLat = Math.abs(lat);
                 
+
                 // Polar
                 if (absLat > 60) {
                     const t = (absLat - 60) / 30; 
@@ -447,9 +451,10 @@ function loadBasemap(target) {
                 if (absLat < 15) {
                     return '#c2d4bc';
                 }
-                
+
                 // Temperate default
                 return '#d0dbc7';
+
             })
             .attr('stroke', '#99a88a')
             .attr('stroke-width', 0.35)
