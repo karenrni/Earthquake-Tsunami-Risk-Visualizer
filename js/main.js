@@ -102,6 +102,11 @@ const colorLegendDiv = d3.select('#colorLegend');
 const sizeLegendDiv = d3.select('#sizeLegend');
 const gradientLegendDiv = d3.select('#sigGradientLegend'); // unused
 
+// detail sidepanel
+const quakeDetailPanel = document.getElementById('quakeDetailPanel');
+const closePanelBtn = document.getElementById('closePanelBtn');
+let selectedQuakeData = null;
+
 // ---------- Layout helpers ----------
 let zoomK = 1;
 
@@ -175,9 +180,21 @@ function resetZoom(duration = 300) {
     svg.transition().duration(duration).call(zoom.transform, d3.zoomIdentity);
 }
 
+// zoom listeners
 if (zoomInBtn) zoomInBtn.addEventListener('click', () => svg.transition().duration(200).call(zoom.scaleBy, 1.3));
 if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => svg.transition().duration(200).call(zoom.scaleBy, 1/1.3));
 if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => { loadBasemap(WORLD_INIT); resetZoom(250); drawAll(); });
+
+// quake sidepanel listeners
+if (closePanelBtn) {
+  closePanelBtn.addEventListener('click', closeQuakePanel);
+}
+
+svg.on('click', function(event) {
+  if (event.target === this || event.target.tagName === 'svg') {
+      closeQuakePanel(); // Close when clicking map background
+  }
+});
 
 //  Controls wiring
 function updateComboVisibility() {
@@ -753,38 +770,49 @@ function drawQuakes() {
             .remove();
     });
 
-    // Hover + click
+    // Hover + click HANDLER PER EACH QUAKE
     rowsAll
-        .on('mouseover', (event, d) => showTooltip(event, d))
-        .on('mousemove', positionTooltip)
-        .on('mouseout', hideTooltip)
-        .on('click', function(event, d) {
-            if (selectedQuake === this) {
-                selectedQuake = null;
-                gQuake.selectAll('g.quake').style('opacity', 1);
-            } else {
-                selectedQuake = this;
-                gQuake.selectAll('g.quake').style('opacity', q => q === d ? 1 : 0.5);
-            }
-        });
+      .style('cursor', 'pointer')
+      // Hover shows tooltip
+      .on('mouseover', (event, d) => showTooltip(event, d))
+      .on('mousemove', positionTooltip)
+      .on('mouseout', hideTooltip)
+      // Click opens detail panel
+      .on('click', function(event, d) {
+          event.stopPropagation();
+          
+          // Hide tooltip when clicking
+          hideTooltip();
+          
+          if (selectedQuakeData === d) {
+              // Clicking same quake - deselect
+              closeQuakePanel();
+          } else {
+              // Select new quake
+              showQuakePanel(d);
+              gQuake.selectAll('g.quake')
+                  .transition().duration(250)
+                  .style('opacity', q => q === d ? 1 : 0.3);
+          }
+      });
     
     let selectedQuake = null;
 
-    rowsAll
-        .style('cursor','pointer')
-        .on('click', function(event, d) {
-            if (selectedQuake === d) {
-                // unselect
-                selectedQuake = null;
-                gQuake.selectAll('g.quake').transition().duration(250).style('opacity', 1);
-                return;
-            }
+    // rowsAll
+    //     .style('cursor','pointer')
+    //     .on('click', function(event, d) {
+    //         if (selectedQuake === d) {
+    //             // unselect
+    //             selectedQuake = null;
+    //             gQuake.selectAll('g.quake').transition().duration(250).style('opacity', 1);
+    //             return;
+    //         }
 
-            selectedQuake = d;
-            gQuake.selectAll('g.quake')
-                .transition().duration(250)
-                .style('opacity', q => q === d ? 1 : 0.2);
-        });
+    //         selectedQuake = d;
+    //         gQuake.selectAll('g.quake')
+    //             .transition().duration(250)
+    //             .style('opacity', q => q === d ? 1 : 0.2);
+    //     });
 
 
     // Fade-in enter vis
@@ -1105,6 +1133,103 @@ function stepPlay() {
     setTimeSlider(next);
     applyFiltersAndRender();
     setTimeout(stepPlay, 900);
+}
+
+// detailed quake sidepanel funcs
+function showQuakePanel(d) {
+  if (!quakeDetailPanel) return;
+  
+  selectedQuakeData = d;
+  const timeFmt = d3.timeFormat('%B %d, %Y at %H:%M UTC');
+  
+  const content = d3.select('#panelContent');
+  content.selectAll('*').remove(); // Clear previous
+  
+  // Title section
+  const titleSec = content.append('div').attr('class', 'detail-section');
+  titleSec.append('div').attr('class', 'detail-title').text(d.place || 'Earthquake Event');
+  titleSec.append('div').attr('class', 'detail-meta').text(d.time ? timeFmt(d.time) : 'Date unknown');
+  
+  // Intensity section
+  const intensitySec = content.append('div').attr('class', 'detail-section');
+  intensitySec.append('h3')
+      .style('font-size', '14px')
+      .style('font-weight', '600')
+      .style('margin-bottom', '12px')
+      .style('color', '#475569')
+      .text('Intensity Measurements');
+  
+  const grid = intensitySec.append('div').attr('class', 'detail-grid');
+  
+  const metrics = [
+      { label: 'Magnitude', value: d.mag, format: v => v.toFixed(1), color: COLORS.mag },
+      { label: 'Significance', value: d.sig, format: v => v, color: COLORS.sig },
+      { label: 'CDI (Felt)', value: d.cdi, format: v => v.toFixed(1), color: COLORS.cdi },
+      { label: 'MMI (Damage)', value: d.mmi, format: v => v.toFixed(1), color: COLORS.mmi }
+  ];
+  
+  metrics.forEach(m => {
+      const item = grid.append('div').attr('class', 'detail-item')
+          .style('background', m.color + '11')
+          .style('border-color', m.color + '33');
+      item.append('div').attr('class', 'detail-item-label').text(m.label);
+      item.append('div').attr('class', 'detail-item-value')
+          .style('color', m.color)
+          .text(m.value != null ? m.format(m.value) : 'N/A');
+  });
+  
+  // Location section
+  const locSec = content.append('div').attr('class', 'detail-section');
+  locSec.append('h3')
+      .style('font-size', '14px')
+      .style('font-weight', '600')
+      .style('margin-bottom', '12px')
+      .style('color', '#475569')
+      .text('Location Details');
+  
+  const locGrid = locSec.append('div').attr('class', 'detail-grid');
+  
+  const depthItem = locGrid.append('div').attr('class', 'detail-item');
+  depthItem.append('div').attr('class', 'detail-item-label').text('Depth');
+  depthItem.append('div').attr('class', 'detail-item-value')
+      .text(d.depth != null ? d.depth.toFixed(0) + ' km' : 'N/A');
+  
+  const coordItem = locGrid.append('div').attr('class', 'detail-item');
+  coordItem.append('div').attr('class', 'detail-item-label').text('Coordinates');
+  coordItem.append('div').attr('class', 'detail-item-value')
+      .style('font-size', '13px')
+      .text(`${d.latitude.toFixed(2)}°, ${d.longitude.toFixed(2)}°`);
+  
+  // Tsunami badge
+  if (d.tsunami === 1) {
+      const tsuSec = content.append('div').attr('class', 'detail-section');
+      const badge = tsuSec.append('div')
+          .style('padding', '12px')
+          .style('background', COLORS.tsunami + '11')
+          .style('border', `2px solid ${COLORS.tsunami}`)
+          .style('border-radius', '8px')
+          .style('text-align', 'center');
+      badge.append('div')
+          .style('font-size', '16px')
+          .style('font-weight', '700')
+          .style('color', COLORS.tsunami)
+          .text('🌊 Tsunami Event');
+      badge.append('div')
+          .style('font-size', '13px')
+          .style('color', '#475569')
+          .style('margin-top', '4px')
+          .text('This earthquake generated a tsunami');
+  }
+  
+  quakeDetailPanel.classList.remove('hidden');
+}
+
+function closeQuakePanel() {
+  if (quakeDetailPanel) {
+      quakeDetailPanel.classList.add('hidden');
+      selectedQuakeData = null;
+      gQuake.selectAll('g.quake').transition().duration(250).style('opacity', 1);
+  }
 }
 
 // Backgrounds 
