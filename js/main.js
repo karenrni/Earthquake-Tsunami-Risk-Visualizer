@@ -1136,89 +1136,244 @@ function stepPlay() {
 }
 
 // detailed quake sidepanel funcs
+
+///////////
 function showQuakePanel(d) {
   if (!quakeDetailPanel) return;
   
   selectedQuakeData = d;
-  const timeFmt = d3.timeFormat('%B %d, %Y at %H:%M UTC');
   
   const content = d3.select('#panelContent');
-  content.selectAll('*').remove(); // Clear previous
+  content.selectAll('*').remove();
   
-  // Title section
+  // Helper: earthquake classification
+  function getEarthquakeClass(mag) {
+    if (!mag) return null;
+    if (mag >= 8.0) return { label: 'Great', color: '#dc2626', desc: 'Can cause serious damage in areas several hundred miles across' };
+    if (mag >= 7.0) return { label: 'Major', color: '#ea580c', desc: 'May cause serious damage over larger areas' };
+    if (mag >= 6.0) return { label: 'Strong', color: '#f59e0b', desc: 'Can cause damage in areas up to 100 miles across' };
+    if (mag >= 5.0) return { label: 'Moderate', color: '#eab308', desc: 'Can cause damage to poorly constructed buildings' };
+    return { label: 'Light to Minor', color: '#84cc16', desc: 'Little to no damage expected' };
+  }
+  
+  const eqClass = getEarthquakeClass(d.mag);
+  
+  // Title section with classification
   const titleSec = content.append('div').attr('class', 'detail-section');
   titleSec.append('div').attr('class', 'detail-title').text(d.place || 'Earthquake Event');
-  titleSec.append('div').attr('class', 'detail-meta').text(d.time ? timeFmt(d.time) : 'Date unknown');
   
-  // Intensity section
+  if (d.year && d.month) {
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    titleSec.append('div').attr('class', 'detail-meta')
+      .text(`${monthNames[d.month - 1]} ${d.year}`);
+  } else if (d.year) {
+    titleSec.append('div').attr('class', 'detail-meta').text(`Year: ${d.year}`);
+  } else {
+    titleSec.append('div').attr('class', 'detail-meta').text('Date unknown');
+  }
+  
+  // Earthquake classification badge
+  if (eqClass) {
+    const classBadge = titleSec.append('div')
+      .style('margin-top', '8px')
+      .style('padding', '8px 12px')
+      .style('background', eqClass.color + '11')
+      .style('border', `2px solid ${eqClass.color}`)
+      .style('border-radius', '8px');
+    
+    classBadge.append('div')
+      .style('font-weight', '700')
+      .style('color', eqClass.color)
+      .style('font-size', '14px')
+      .text(`${eqClass.label} Earthquake`);
+    
+    classBadge.append('div')
+      .style('font-size', '12px')
+      .style('color', '#64748b')
+      .style('margin-top', '2px')
+      .text(eqClass.desc);
+  }
+  
+  // Overall Significance section
+  if (d.sig != null) {
+    const sigSec = content.append('div').attr('class', 'detail-section');
+    sigSec.append('h3')
+      .style('font-size', '14px')
+      .style('font-weight', '600')
+      .style('margin-bottom', '8px')
+      .style('color', '#475569')
+      .text('Overall Significance');
+    
+    const sigBox = sigSec.append('div')
+      .style('padding', '12px')
+      .style('background', COLORS.sig + '11')
+      .style('border', `2px solid ${COLORS.sig}`)
+      .style('border-radius', '8px')
+      .style('text-align', 'center');
+    
+    sigBox.append('div')
+      .style('font-size', '32px')
+      .style('font-weight', '700')
+      .style('color', COLORS.sig)
+      .text(d.sig);
+    
+    sigBox.append('div')
+      .style('font-size', '12px')
+      .style('color', '#64748b')
+      .style('margin-top', '4px')
+      .text('Composite score based on magnitude, location, and impact. Higher values indicate greater significance.');
+  }
+  
+  // Intensity Measurements
   const intensitySec = content.append('div').attr('class', 'detail-section');
   intensitySec.append('h3')
+    .style('font-size', '14px')
+    .style('font-weight', '600')
+    .style('margin-bottom', '12px')
+    .style('color', '#475569')
+    .text('Intensity Measurements');
+  
+  const grid = intensitySec.append('div').attr('class', 'detail-grid');
+  
+  // Magnitude
+  const magItem = grid.append('div').attr('class', 'detail-item')
+    .style('background', COLORS.mag + '11')
+    .style('border-color', COLORS.mag + '33');
+  magItem.append('div').attr('class', 'detail-item-label').text('Magnitude (Richter)');
+  magItem.append('div').attr('class', 'detail-item-value')
+    .style('color', COLORS.mag)
+    .text(d.mag != null ? d.mag.toFixed(1) : 'N/A');
+  magItem.append('div')
+    .style('font-size', '10px')
+    .style('color', '#64748b')
+    .style('margin-top', '4px')
+    .text('Energy released by the earthquake');
+  
+  // CDI
+  const cdiItem = grid.append('div').attr('class', 'detail-item')
+    .style('background', COLORS.cdi + '11')
+    .style('border-color', COLORS.cdi + '33');
+  cdiItem.append('div').attr('class', 'detail-item-label').text('CDI (Felt Intensity)');
+  cdiItem.append('div').attr('class', 'detail-item-value')
+    .style('color', COLORS.cdi)
+    .text(d.cdi != null ? d.cdi.toFixed(1) : 'N/A');
+  cdiItem.append('div')
+    .style('font-size', '10px')
+    .style('color', '#64748b')
+    .style('margin-top', '4px')
+    .text('How strongly people felt it (1-10 scale)');
+  
+  // MMI
+  const mmiItem = grid.append('div').attr('class', 'detail-item')
+    .style('background', COLORS.mmi + '11')
+    .style('border-color', COLORS.mmi + '33');
+  mmiItem.append('div').attr('class', 'detail-item-label').text('MMI (Damage Intensity)');
+  mmiItem.append('div').attr('class', 'detail-item-value')
+    .style('color', COLORS.mmi)
+    .text(d.mmi != null ? d.mmi.toFixed(1) : 'N/A');
+  mmiItem.append('div')
+    .style('font-size', '10px')
+    .style('color', '#64748b')
+    .style('margin-top', '4px')
+    .text('Structural damage observed (1-10 scale)');
+  
+  // Data Quality section
+  if (d.nst != null || d.gap != null) {
+    const qualitySec = content.append('div').attr('class', 'detail-section');
+    qualitySec.append('h3')
       .style('font-size', '14px')
       .style('font-weight', '600')
       .style('margin-bottom', '12px')
       .style('color', '#475569')
-      .text('Intensity Measurements');
-  
-  const grid = intensitySec.append('div').attr('class', 'detail-grid');
-  
-  const metrics = [
-      { label: 'Magnitude', value: d.mag, format: v => v.toFixed(1), color: COLORS.mag },
-      { label: 'Significance', value: d.sig, format: v => v, color: COLORS.sig },
-      { label: 'CDI (Felt)', value: d.cdi, format: v => v.toFixed(1), color: COLORS.cdi },
-      { label: 'MMI (Damage)', value: d.mmi, format: v => v.toFixed(1), color: COLORS.mmi }
-  ];
-  
-  metrics.forEach(m => {
-      const item = grid.append('div').attr('class', 'detail-item')
-          .style('background', m.color + '11')
-          .style('border-color', m.color + '33');
-      item.append('div').attr('class', 'detail-item-label').text(m.label);
-      item.append('div').attr('class', 'detail-item-value')
-          .style('color', m.color)
-          .text(m.value != null ? m.format(m.value) : 'N/A');
-  });
+      .text('Data Quality');
+    
+    const qualityGrid = qualitySec.append('div').attr('class', 'detail-grid');
+    
+    if (d.nst != null) {
+      const nstItem = qualityGrid.append('div').attr('class', 'detail-item');
+      nstItem.append('div').attr('class', 'detail-item-label').text('Seismic Stations');
+      nstItem.append('div').attr('class', 'detail-item-value').text(d.nst);
+      nstItem.append('div')
+        .style('font-size', '10px')
+        .style('color', '#64748b')
+        .style('margin-top', '4px')
+        .text('Number of stations that detected this event');
+    }
+    
+    if (d.gap != null) {
+      const gapItem = qualityGrid.append('div').attr('class', 'detail-item');
+      gapItem.append('div').attr('class', 'detail-item-label').text('Azimuthal Gap');
+      gapItem.append('div').attr('class', 'detail-item-value').text(d.gap + '°');
+      gapItem.append('div')
+        .style('font-size', '10px')
+        .style('color', '#64748b')
+        .style('margin-top', '4px')
+        .text('Smaller gap = better location accuracy');
+    }
+  }
   
   // Location section
   const locSec = content.append('div').attr('class', 'detail-section');
   locSec.append('h3')
-      .style('font-size', '14px')
-      .style('font-weight', '600')
-      .style('margin-bottom', '12px')
-      .style('color', '#475569')
-      .text('Location Details');
+    .style('font-size', '14px')
+    .style('font-weight', '600')
+    .style('margin-bottom', '12px')
+    .style('color', '#475569')
+    .text('Location Details');
   
   const locGrid = locSec.append('div').attr('class', 'detail-grid');
   
   const depthItem = locGrid.append('div').attr('class', 'detail-item');
   depthItem.append('div').attr('class', 'detail-item-label').text('Depth');
   depthItem.append('div').attr('class', 'detail-item-value')
-      .text(d.depth != null ? d.depth.toFixed(0) + ' km' : 'N/A');
+    .text(d.depth != null ? d.depth.toFixed(0) + ' km' : 'N/A');
+  depthItem.append('div')
+    .style('font-size', '10px')
+    .style('color', '#64748b')
+    .style('margin-top', '4px')
+    .text(d.depth != null && d.depth < 70 ? 'Shallow earthquake' : 
+          d.depth != null && d.depth < 300 ? 'Intermediate depth' : 
+          d.depth != null ? 'Deep earthquake' : '');
   
   const coordItem = locGrid.append('div').attr('class', 'detail-item');
   coordItem.append('div').attr('class', 'detail-item-label').text('Coordinates');
   coordItem.append('div').attr('class', 'detail-item-value')
-      .style('font-size', '13px')
-      .text(`${d.latitude.toFixed(2)}°, ${d.longitude.toFixed(2)}°`);
+    .style('font-size', '13px')
+    .text(`${d.latitude.toFixed(2)}°, ${d.longitude.toFixed(2)}°`);
+  
+  // Nearest station
+  if (d.dmin != null) {
+    const dminItem = locGrid.append('div').attr('class', 'detail-item');
+    dminItem.append('div').attr('class', 'detail-item-label').text('Nearest Station');
+    dminItem.append('div').attr('class', 'detail-item-value')
+      .style('font-size', '15px')
+      .text((d.dmin * 111.32).toFixed(0) + ' km');
+    dminItem.append('div')
+      .style('font-size', '10px')
+      .style('color', '#64748b')
+      .style('margin-top', '4px')
+      .text('Distance to closest seismic monitoring station');
+  }
   
   // Tsunami badge
   if (d.tsunami === 1) {
-      const tsuSec = content.append('div').attr('class', 'detail-section');
-      const badge = tsuSec.append('div')
-          .style('padding', '12px')
-          .style('background', COLORS.tsunami + '11')
-          .style('border', `2px solid ${COLORS.tsunami}`)
-          .style('border-radius', '8px')
-          .style('text-align', 'center');
-      badge.append('div')
-          .style('font-size', '16px')
-          .style('font-weight', '700')
-          .style('color', COLORS.tsunami)
-          .text('🌊 Tsunami Event');
-      badge.append('div')
-          .style('font-size', '13px')
-          .style('color', '#475569')
-          .style('margin-top', '4px')
-          .text('This earthquake generated a tsunami');
+    const tsuSec = content.append('div').attr('class', 'detail-section');
+    const badge = tsuSec.append('div')
+      .style('padding', '12px')
+      .style('background', COLORS.tsunami + '11')
+      .style('border', `2px solid ${COLORS.tsunami}`)
+      .style('border-radius', '8px')
+      .style('text-align', 'center');
+    badge.append('div')
+      .style('font-size', '16px')
+      .style('font-weight', '700')
+      .style('color', COLORS.tsunami)
+      .text('🌊 Tsunami Generated');
+    badge.append('div')
+      .style('font-size', '13px')
+      .style('color', '#475569')
+      .style('margin-top', '4px')
+      .text('This earthquake triggered a tsunami wave');
   }
   
   quakeDetailPanel.classList.remove('hidden');
